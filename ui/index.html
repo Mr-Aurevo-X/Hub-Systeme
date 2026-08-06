@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>L'Atelier PC — Système</title>
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+  <link rel="stylesheet" href="fonts/fonts.css" />
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="hub.css" />
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="theme-pc-command">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="hub-shell" id="hubShell">
+    <aside class="hub-sidebar" id="hubSidebar" aria-label="Navigation hub">
+      <div class="hub-brand">
+        <img class="hub-brand-mark" src="app-icon.svg" width="36" height="36" alt="" />
+        <div class="hub-brand-text">
+          <strong>Système</strong>
+          <span>L'Atelier PC</span>
+        </div>
+      </div>
+
+      <nav class="hub-nav" id="hubNav" role="navigation">
+        <button type="button" class="hub-nav-item is-active" data-view="dashboard" data-tooltip="Accueil" title="Accueil">
+          <span class="hub-nav-ico" aria-hidden="true">⌂</span>
+          <span class="hub-nav-label">Accueil</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="systemclean" data-tooltip="SystemClean" title="SystemClean">
+          <span class="hub-nav-ico" aria-hidden="true">⌫</span>
+          <span class="hub-nav-label">SystemClean</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="processhub" data-tooltip="ProcessHub" title="ProcessHub">
+          <span class="hub-nav-ico" aria-hidden="true">⚡</span>
+          <span class="hub-nav-label">ProcessHub</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="uninstx" data-tooltip="UninstX" title="UninstX">
+          <span class="hub-nav-ico" aria-hidden="true">⊟</span>
+          <span class="hub-nav-label">UninstX</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="sysinspect" data-tooltip="SysInspect" title="SysInspect">
+          <span class="hub-nav-ico" aria-hidden="true">◎</span>
+          <span class="hub-nav-label">SysInspect</span>
+        </button>
+        <button type="button" class="hub-nav-item" data-view="admin" data-tooltip="Admin léger" title="Admin léger">
+          <span class="hub-nav-ico" aria-hidden="true">⚙</span>
+          <span class="hub-nav-label">Admin léger</span>
+        </button>
+      </nav>
+
+      <div class="hub-sidebar-foot">
+        <button type="button" class="hub-collapse-btn" id="btnCollapse" aria-expanded="true" title="Réduire la barre">
+          <span class="hub-nav-ico" aria-hidden="true">◂</span>
+          <span class="hub-nav-label">Réduire</span>
+        </button>
+        <p class="hub-privacy" id="privacyNote">Mr-Aurevo-X ne collecte aucune donnée. Outils locaux uniquement.</p>
+      </div>
+    </aside>
+
+    <main class="hub-main" id="hubMain">
+      <div class="hub-view is-enter" id="hubView" data-view="dashboard">
+        <!-- Dashboard monté au boot ; modules lazy -->
+      </div>
+    </main>
+  </div>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="suite-boot.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
