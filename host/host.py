@@ -1,4 +1,4 @@
-"""Hub-Systeme — host WebView2 (Vague H1 / Couche A)."""
+"""Hub-Systeme — host WebView2 (Vague H4 Couche B)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,14 @@ _HOST_DIR = Path(__file__).resolve().parent
 if str(_HOST_DIR) not in sys.path:
     sys.path.insert(0, str(_HOST_DIR))
 
+from api_modules import (  # noqa: E402
+    AdminApi,
+    ProcessHubApi,
+    SysInspectApi,
+    SystemCleanApi,
+    UninstXApi,
+)
+from security import ConfirmGate  # noqa: E402
 from suite_launch import (  # noqa: E402
     launch_suite_app,
     resolve_suite_accent,
@@ -79,7 +87,6 @@ class DashboardApi:
         self._hub = hub
 
     def get_kpis(self) -> dict:
-        """KPIs soft (disque C:, RAM, process) — placeholders tolérants en cas d'échec."""
         disk_free_gb = None
         disk_total_gb = None
         ram_used_pct = None
@@ -132,38 +139,17 @@ $ramUsed = if ($os.TotalVisibleMemorySize) {
         return {"ok": True, "modules": self._hub.module_catalog()}
 
 
-class LaunchModuleApi:
-    """Couche A — lance les apps Atelier siblings (pas de mutator in-process)."""
-
-    def __init__(self, hub: "Api", module_id: str, apps: list[str]) -> None:
-        self._hub = hub
-        self.module_id = module_id
-        self.apps = list(apps)
-
-    def list_apps(self) -> dict:
-        return {"ok": True, "module": self.module_id, "apps": self.apps}
-
-    def open_app(self, name: str = "") -> dict:
-        name = (name or "").strip()
-        if name not in self.apps:
-            return {"ok": False, "error": f"App hors module {self.module_id}: {name}"}
-        return launch_suite_app(name)
-
-
 class Api(WindowChromeMixin):
     def __init__(self) -> None:
         self._window: Any = None
         self._maximized = False
+        self._confirm = ConfirmGate(ttl_seconds=90.0)
         self.dashboard = DashboardApi(self)
-        self.systemclean = LaunchModuleApi(self, "systemclean", ["WinCleaner", "DiskMap"])
-        self.processhub = LaunchModuleApi(self, "processhub", ["ProcessGuard", "StartupX"])
-        self.uninstx = LaunchModuleApi(self, "uninstx", ["UninstX"])
-        self.sysinspect = LaunchModuleApi(self, "sysinspect", ["SysInspect"])
-        self.admin = LaunchModuleApi(
-            self,
-            "admin",
-            ["PowerPlan", "PrintQueue", "RestorePoint", "UserSessions"],
-        )
+        self.systemclean = SystemCleanApi(self._confirm)
+        self.processhub = ProcessHubApi(self._confirm)
+        self.uninstx = UninstXApi(self._confirm)
+        self.sysinspect = SysInspectApi()
+        self.admin = AdminApi(self._confirm)
 
     def set_window(self, window: Any) -> None:
         WindowChromeMixin.set_window(self, window)
@@ -180,19 +166,19 @@ class Api(WindowChromeMixin):
                 "id": "processhub",
                 "label": "ProcessHub",
                 "desc": "Processus et démarrage (ProcessGuard · StartupX)",
-                "apps": self.processhub.apps,
+                "apps": ["ProcessGuard", "StartupX"],
             },
             {
                 "id": "uninstx",
                 "label": "UninstX",
                 "desc": "Désinstallation et leftovers",
-                "apps": self.uninstx.apps,
+                "apps": ["UninstX"],
             },
             {
                 "id": "sysinspect",
                 "label": "SysInspect",
                 "desc": "Événements Windows et pilotes (lecture)",
-                "apps": self.sysinspect.apps,
+                "apps": ["SysInspect"],
             },
             {
                 "id": "admin",
@@ -228,7 +214,6 @@ class Api(WindowChromeMixin):
             return {"ok": False, "error": str(exc)}
 
     def open_suite_app(self, name: str) -> dict:
-        """Fallback root — préférer api.<module>.open_app."""
         return launch_suite_app(name)
 
 
@@ -236,7 +221,6 @@ def main() -> None:
     index = ui_dir() / "index.html"
     if not index.is_file():
         raise SystemExit(f"UI introuvable: {index}")
-    # Hérite UAC du launcher ; pas de re-prompt local.
     _ = is_admin()
     api = Api()
     create_tool_window(
