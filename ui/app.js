@@ -1,17 +1,20 @@
 /**
  * Hub-Systeme shell — Dashboard boot + lazy modules + sidebar collapsible.
  */
+const HUB_NAME = "L'Atelier PC Command — Système";
+
 const TITLES = {
-  dashboard: "L'Atelier PC — Système",
-  systemclean: "L'Atelier PC — Système [SystemClean]",
-  processhub: "L'Atelier PC — Système [ProcessHub]",
-  uninstx: "L'Atelier PC — Système [UninstX]",
-  sysinspect: "L'Atelier PC — Système [SysInspect]",
-  admin: "L'Atelier PC — Système [Admin]",
+  dashboard: HUB_NAME,
+  systemclean: `${HUB_NAME} [SystemClean]`,
+  processhub: `${HUB_NAME} [ProcessHub]`,
+  uninstx: `${HUB_NAME} [UninstX]`,
+  sysinspect: `${HUB_NAME} [SysInspect]`,
+  admin: `${HUB_NAME} [Admin]`,
 };
 
 const cache = Object.create(null);
 let currentView = "dashboard";
+let currentSegment = "";
 
 function apiRoot() {
   return window.pywebview && window.pywebview.api;
@@ -27,8 +30,7 @@ async function waitApi(timeoutMs = 8000) {
   return apiRoot();
 }
 
-async function setTitle(viewId) {
-  const title = TITLES[viewId] || TITLES.dashboard;
+async function applyTitle(title) {
   document.title = title;
   const a = apiRoot();
   try {
@@ -36,6 +38,15 @@ async function setTitle(viewId) {
       await a.set_window_title(title);
     }
   } catch (_) {}
+}
+
+async function setTitle(viewId, segmentLabel) {
+  currentSegment = segmentLabel || "";
+  let title = TITLES[viewId] || TITLES.dashboard;
+  if (segmentLabel && viewId !== "dashboard") {
+    title = `${HUB_NAME} [${segmentLabel}]`;
+  }
+  await applyTitle(title);
 }
 
 function setActiveNav(viewId) {
@@ -58,6 +69,7 @@ async function showView(viewId) {
   if (!root) return;
 
   currentView = id;
+  currentSegment = "";
   setActiveNav(id);
   await setTitle(id);
   root.dataset.view = id;
@@ -100,7 +112,6 @@ function wireSidebar() {
 async function boot() {
   wireSidebar();
   await waitApi();
-  // suite-boot.js auto-applique accent/thème sur pywebviewready
   await showView("dashboard");
 }
 
@@ -110,5 +121,9 @@ if (document.readyState === "loading") {
   boot();
 }
 
-// Expose for dashboard tiles
-window.HubSysteme = { showView };
+window.HubSysteme = {
+  showView,
+  setSegmentTitle(label) {
+    setTitle(currentView, label);
+  },
+};

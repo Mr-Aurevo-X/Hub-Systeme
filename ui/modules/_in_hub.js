@@ -117,6 +117,8 @@ export function mountModuleShell(root, opts) {
     });
   }
 
+  // Expose for modules that call setSegment('…') themselves after wiring.
+
   function askConfirm(message, titleText = "Confirmer") {
     confirmTitle.textContent = titleText;
     confirmMsg.textContent = message;

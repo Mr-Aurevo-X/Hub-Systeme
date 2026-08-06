@@ -183,8 +183,57 @@ body {
   overflow: auto;
 }
 
-.hub-view[data-view="uninstx"] {
+.hub-view[data-view="uninstx"],
+.hub-view[data-view="systemclean"],
+.hub-view[data-view="processhub"],
+.hub-view[data-view="sysinspect"],
+.hub-view[data-view="admin"] {
   overflow: hidden;
+}
+
+.hub-section-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.hub-dash-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.hub-refresh-btn {
+  appearance: none;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg2) 80%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.hub-refresh-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.hub-tile-ico {
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.9;
+  margin-bottom: 0.15rem;
+}
+
+.hub-seg.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .hub-view.is-enter {
