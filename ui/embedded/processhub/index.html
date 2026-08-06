@@ -1,0 +1,181 @@
+﻿<!DOCTYPE html>
+
+<html class="hub-inframe" lang="fr">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>ProcessGuard</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+<link rel="stylesheet" href="tokens.css" />
+
+  <link rel="stylesheet" href="shell.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="stylesheet" href="progress.css" />
+
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body class="theme-pc-command">
+
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+
+        <div class="brand-text">
+
+          <h1>ProcessGuard</h1>
+
+          <p data-i18n="tagline">Processus · CPU · RAM</p>
+
+        </div>
+
+      </div>
+
+      <span class="badge">LOCAL</span>
+
+      <div class="feature-desc" id="featureDesc">
+
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+
+        <span data-i18n="features">Liste les processus actifs (CPU, RAM). Filtrez, terminez une tâche ou ouvrez son dossier.</span>
+
+      </div>
+
+      <p class="privacy-note" id="privacyNote" data-privacy-fr="Mr-Aurevo-X ne collecte aucune donnée. Lecture locale des processus uniquement." data-privacy-en="Mr-Aurevo-X does not collect your data. Local process view only.">Mr-Aurevo-X ne collecte aucune donnée. Lecture locale des processus uniquement.</p>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+
+    </aside>
+
+    <div class="main hub-main">
+
+            <nav class="hub-tabs" role="tablist">
+        <button type="button" class="hub-tab active" data-tab="procs" aria-selected="true">Processus</button>
+        <button type="button" class="hub-tab" data-tab="services" aria-selected="false">Services</button>
+      </nav>
+      <section class="hub-panel active" data-panel="procs">
+<header class="page-header">
+
+        <h2 data-i18n="title">Processus</h2>
+
+        <p id="meta" data-i18n="loading">Chargement…</p>
+
+      </header>
+
+      <div class="toolbar">
+
+        <input type="search" id="filter" placeholder="Filtrer nom / PID / chemin…" data-i18n-placeholder="filterPh" autocomplete="off" />
+
+        <label class="chk"><input type="checkbox" id="autoRefresh" checked /> <span data-i18n="autoLabel">Auto</span></label>
+
+        <button type="button" class="btn accent" id="btnRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+
+        <button type="button" class="btn" id="btnKill" disabled data-i18n="btnKill">Terminer</button>
+
+        <button type="button" class="btn" id="btnEmptyWorkingSet" disabled data-i18n="btnEmptyWorkingSet">Vider RAM</button>
+
+        <button type="button" class="btn" id="btnOpen" disabled data-i18n="btnOpen">Dossier</button>
+
+      </div>
+
+      <div class="table-wrap">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th data-sort="name" data-i18n="thName">Nom</th>
+
+              <th data-sort="pid" data-i18n="thPid">PID</th>
+
+              <th data-sort="cpu" data-i18n="thCpu">CPU %</th>
+
+              <th data-sort="ram" data-i18n="thRam">RAM Mo</th>
+
+              <th data-i18n="thPath">Chemin</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="tbody"></tbody>
+
+        </table>
+
+      </div>
+
+            <div class="progress-row" id="progressRow" hidden>
+
+        <span id="progressLabel" class="progress-label"></span>
+
+        <div class="progress" id="progress"><i id="progressBar"></i></div>
+
+      </div>
+
+      <p class="status" id="status"></p>
+      </section>
+
+      <section class="hub-panel" data-panel="services" hidden>
+        <div class="hub-toolbar">
+          <input type="search" id="svcFilter" placeholder="Filtrer..." style="min-width:220px" />
+          <button type="button" class="btn accent" id="btnSvcRefresh">Rafraichir</button>
+          <button type="button" class="btn" id="btnSvcStart" disabled>Demarrer</button>
+          <button type="button" class="btn" id="btnSvcStop" disabled>Arreter</button>
+          <button type="button" class="btn" id="btnSvcRestart" disabled>Redemarrer</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th>Nom</th><th>Affichage</th><th>Statut</th><th>Demarrage</th>
+        </tr></thead><tbody id="svcBody"></tbody></table></div>
+        <p class="status" id="svcStatus"></p>
+      </section>
+
+    </div>
+
+  </div>
+<script src="suite-boot.js"></script>
+
+  <script src="suite-progress.js"></script>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="app.js"></script>
+  <script src="hub.js"></script>
+
+
+  <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('processhub');</script>
+</body>
+
+</html>
+

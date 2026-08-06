@@ -1,0 +1,484 @@
+﻿<!DOCTYPE html>
+
+<html class="hub-inframe" lang="fr">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>WinCleaner — L'Atelier PC Command</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="shell.css" />
+<link rel="stylesheet" href="styles.css?v=20260719-brand" />
+
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body class="theme-pc-command">
+
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+
+        <div class="brand-text">
+
+          <h1>WinCleaner</h1>
+
+          <p data-i18n="tagline">Nettoyage sûr</p>
+
+        </div>
+
+      </div>
+
+      <span class="badge">LOCAL</span>
+
+      <div class="feature-desc" id="featureDesc">
+
+        <strong id="featuresTitle" data-i18n="featuresTitle">Fonctions</strong>
+
+        <span id="featuresText" data-i18n="features">Nettoyage Windows sûr : santé disque, caches, debloat, désinstallation, optimisations et sessions.</span>
+
+      </div>
+
+      <p class="privacy-note" id="privacyNote">Mr-Aurevo-X ne collecte aucune donnée. Traitement local sur cette machine.</p>
+
+      <nav class="nav" id="nav">
+
+        <button type="button" class="nav-btn active" data-page="health" data-i18n="navHealth">Santé</button>
+
+        <button type="button" class="nav-btn" data-page="clean" data-i18n="navClean">Nettoyage</button>
+
+        <button type="button" class="nav-btn" data-page="traces" data-i18n="navTraces">Traces</button>
+
+        <button type="button" class="nav-btn" data-page="debloat" data-i18n="navDebloat">Debloat</button>
+
+        <button type="button" class="nav-btn" data-page="uninstall" data-i18n="navUninstall">Désinstaller</button>
+
+        <button type="button" class="nav-btn" data-page="opt" data-i18n="navOpt">Optimisations</button>
+
+        <button type="button" class="nav-btn" data-page="sessions" data-i18n="navSessions">Sessions</button>
+
+        <button type="button" class="nav-btn" data-page="exclusions" data-i18n="navExclusions">Exclusions</button>
+        <button type="button" class="nav-btn" data-page="hub" data-i18n="navHub">Outils</button>
+
+      </nav>
+
+      <div class="side-actions">
+
+        <button type="button" class="btn accent" id="btnRestore" data-i18n="btnRestore">Point de restauration</button>
+
+      </div>
+
+      <div class="side-status" id="sideStatus" data-i18n="ready">Prêt</div>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+
+    </aside>
+
+
+
+    <div class="main">
+
+      <div class="page-header">
+
+        <h2 id="pageTitle">Santé</h2>
+
+        <p id="pageSub">Disques, dossiers cibles — ouvrir DiskMap, StartupX</p>
+
+      </div>
+
+      <div class="content">
+
+        <!-- Santé -->
+
+        <section class="page active" id="page-health">
+
+          <div class="stats" id="healthStats"></div>
+
+          <div class="panel" id="diskDeltaPanel" hidden>
+
+            <h3 data-i18n="diskDeltaTitle">Dernier delta disque</h3>
+
+            <ul class="list" id="diskDeltaList"><li class="muted">—</li></ul>
+
+          </div>
+
+          <div class="charts">
+
+            <div class="chart-box"><canvas id="chartDisk"></canvas></div>
+
+            <div class="chart-box"><canvas id="chartFolders"></canvas></div>
+
+          </div>
+
+          <div class="btn-row">
+
+            <button type="button" class="btn accent" id="btnHealthRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+
+            <button type="button" class="btn" id="btnOpenDiskMap" data-i18n="btnOpenDiskMap">Ouvrir DiskMap</button>
+<button type="button" class="btn" id="btnOpenStartupX" data-i18n="btnOpenStartupX">Ouvrir StartupX</button>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- Nettoyage -->
+
+        <section class="page" id="page-clean">
+
+          <div class="stats" id="cleanStats">
+
+            <div class="stat"><div class="label" data-i18n="statCats">Catégories</div><div class="value" id="stCats">—</div></div>
+
+            <div class="stat blue"><div class="label" data-i18n="statSel">Sélection</div><div class="value" id="stSel">0</div></div>
+
+            <div class="stat warn"><div class="label" data-i18n="statEst">Estimation</div><div class="value" id="stEst">—</div></div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="statCats">Catégories</h3>
+
+            <div class="check-grid" id="cleanCats"></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn" id="btnProfileLight" data-i18n="btnProfileLight">Profil Léger</button>
+
+              <button type="button" class="btn" id="btnProfileGame" data-i18n="btnProfileGame">Profil Gaming</button>
+
+              <button type="button" class="btn" id="btnProfileMax" data-i18n="btnProfileMax">Propre max</button>
+
+              <button type="button" class="btn accent" id="btnScanClean" data-i18n="btnScan">Analyser</button>
+
+              <button type="button" class="btn danger" id="btnRunClean" data-i18n="btnClean">Nettoyer</button>
+
+            </div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="scanResultTitle">Résultat analyse</h3>
+
+            <ul class="list" id="cleanResult"><li class="muted" data-i18n="emptyScanHint">Lance une analyse.</li></ul>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- Traces -->
+
+        <section class="page" id="page-traces">
+
+          <div class="guard" data-i18n="guardTraces">Traces locales de ce que Windows a ouvert ou affiché. Lister avant d’effacer. Les captures d’écran demandent une confirmation renforcée.</div>
+
+          <div class="stats" id="tracesStats">
+
+            <div class="stat"><div class="label" data-i18n="statCats">Catégories</div><div class="value" id="stTraceCats">—</div></div>
+
+            <div class="stat blue"><div class="label" data-i18n="statSel">Sélection</div><div class="value" id="stTraceSel">0</div></div>
+
+            <div class="stat warn"><div class="label" data-i18n="statItems">Éléments</div><div class="value" id="stTraceItems">—</div></div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="tracesCatsTitle">Catégories de traces</h3>
+
+            <div class="check-grid" id="tracesCats"></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn accent" id="btnListTraces" data-i18n="btnListTraces">Lister</button>
+
+              <button type="button" class="btn danger" id="btnClearTraces" data-i18n="btnClearTraces">Effacer la sélection</button>
+
+            </div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="tracesResultTitle">Contenu listé</h3>
+
+            <div id="tracesResult"><p class="muted" data-i18n="emptyTracesHint">Lance une liste pour voir les traces.</p></div>
+
+          </div>
+
+        </section>
+
+
+
+                <section class="page" id="page-hub">
+          <div class="panel">
+            <h3>TempWatch</h3>
+            <p class="muted">Tailles des dossiers temporaires courants.</p>
+            <div class="btn-row">
+              <button type="button" class="btn accent" id="btnTempSizes">Mesurer Temp</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Chemin</th><th>Mo</th><th>Fichiers</th><th></th></tr></thead>
+              <tbody id="tempBody"></tbody></table></div>
+          </div>
+          <div class="panel">
+            <h3>Corbeille</h3>
+            <div class="btn-row">
+              <button type="button" class="btn accent" id="btnRecycleList">Lister</button>
+              <button type="button" class="btn danger" id="btnRecycleEmpty">Vider la corbeille</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Taille</th><th>Type</th></tr></thead>
+              <tbody id="recycleBody"></tbody></table></div>
+            <p class="muted" id="recycleMeta"></p>
+          </div>
+          <div class="panel">
+            <h3>Cache d icones</h3>
+            <p class="muted">Redemarre Explorer et reconstruit IconCache / thumbcache.</p>
+            <div class="btn-row">
+              <button type="button" class="btn accent" id="btnIconRebuild">Reconstruire</button>
+            </div>
+            <pre class="hub-pre" id="iconOut" style="min-height:80px">—</pre>
+          </div>
+          <div class="panel">
+            <h3>Fichiers recents (detail)</h3>
+            <p class="muted">Complement Traces — raccourcis .lnk du dossier Recent Windows.</p>
+            <div class="btn-row">
+              <button type="button" class="btn accent" id="btnRecentList">Lister .lnk</button>
+              <button type="button" class="btn danger" id="btnRecentClear">Effacer les .lnk</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Cible</th><th>Modifie</th><th></th></tr></thead>
+              <tbody id="recentBody"></tbody></table></div>
+            <p class="muted" id="recentMeta"></p>
+          </div>
+        </section>
+        <!-- Debloat -->
+
+        <section class="page" id="page-debloat">
+
+          <div class="guard" data-i18n="guardDebloat">Les apps dans keep-apps.txt sont protégées. Analyse avant suppression.</div>
+
+          <div class="panel">
+
+            <h3 data-i18n="bloatTitle">Apps détectées</h3>
+
+            <div class="check-grid" id="bloatList"></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn accent" id="btnScanBloat" data-i18n="btnScanBloat">Scanner</button>
+
+              <button type="button" class="btn danger" id="btnRemoveBloat" data-i18n="btnRemoveBloat">Supprimer sélection</button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- Désinstaller -->
+
+        <section class="page" id="page-uninstall">
+
+          <div class="guard" data-i18n="guardUninstall">SystemGuard : les dossiers système / Shared nécessitent une confirmation renforcée.</div>
+
+          <div class="panel">
+
+            <div class="field">
+
+              <input type="search" id="purgeQuery" data-i18n-placeholder="purgePh" placeholder="Mot-clé (ex. fivem, discord…)" />
+
+              <button type="button" class="btn accent" id="btnFindPurge" data-i18n="btnSearch">Rechercher</button>
+
+            </div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="installsTitle">Installations</h3>
+
+            <div class="table-wrap"><table><thead><tr><th></th><th data-i18n="thName">Nom</th><th data-i18n="thPublisher">Éditeur</th><th data-i18n="thVersion">Version</th></tr></thead><tbody id="purgeApps"></tbody></table></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn danger" id="btnOfficialUninstall" data-i18n="btnOfficialUninstall">Désinstaller officiel</button>
+
+            </div>
+
+          </div>
+
+          <div class="panel">
+
+            <h3 data-i18n="leftoversTitle">Restes détectés</h3>
+
+            <div class="table-wrap"><table><thead><tr><th></th><th data-i18n="thPath">Chemin</th><th data-i18n="thSize">Taille</th><th data-i18n="thVerdict">Verdict</th></tr></thead><tbody id="purgeLeft"></tbody></table></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn danger" id="btnPurgeLeft" data-i18n="btnPurgeLeft">Purger sélection (Safe)</button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- Optimisations -->
+
+        <section class="page" id="page-opt">
+
+          <div class="panel">
+
+            <h3 data-i18n="sysActionsTitle">Actions système</h3>
+
+            <div class="check-grid" id="optList"></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn accent" id="btnRunOpt" data-i18n="btnApply">Appliquer</button>
+
+              <button type="button" class="btn" id="btnWinSxS" data-i18n="btnWinSxS">Analyser WinSxS</button>
+
+              <button type="button" class="btn" id="btnDism" data-i18n="btnDism">DISM RestoreHealth</button>
+
+              <button type="button" class="btn" id="btnSfc" data-i18n="btnSfc">SFC /scannow</button>
+
+            </div>
+
+          </div>
+
+          <div class="panel"><h3 data-i18n="outputTitle">Sortie</h3><ul class="list" id="optOut"><li class="muted">—</li></ul></div>
+
+        </section>
+
+
+
+        <!-- Sessions -->
+
+        <section class="page" id="page-sessions">
+
+          <div class="panel">
+
+            <h3 data-i18n="historyTitle">Historique</h3>
+
+            <div class="table-wrap"><table><thead><tr><th data-i18n="thDate">Date</th><th data-i18n="thAction">Action</th><th data-i18n="thDetail">Détail</th></tr></thead><tbody id="sessionsBody"></tbody></table></div>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn accent" id="btnRefreshSessions" data-i18n="btnRefresh">Rafraîchir</button>
+
+              <button type="button" class="btn" id="btnExportReport" data-i18n="btnExportReport">Rapport HTML</button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+
+        <!-- Exclusions -->
+
+        <section class="page" id="page-exclusions">
+
+          <div class="guard" data-i18n="guardExclusions">Chemins ou motifs exclus du nettoyage et de la purge (un par ligne). Ex. un dossier projet ou un nom d'app.</div>
+
+          <div class="panel">
+
+            <h3 data-i18n="exclTitle">Exclusions utilisateur</h3>
+
+            <textarea id="exclText" rows="12" style="width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid var(--border);background:rgba(12,15,20,0.55);color:var(--text);font-family:var(--mono);font-size:0.82rem;resize:vertical;outline:0"></textarea>
+
+            <div class="btn-row">
+
+              <button type="button" class="btn accent" id="btnSaveExcl" data-i18n="btnSave">Enregistrer</button>
+
+              <button type="button" class="btn" id="btnReloadExcl" data-i18n="btnReload">Recharger</button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+
+</div>
+
+    </div>
+
+
+
+    <div class="console">
+
+      <div class="console-head">
+
+        <span data-i18n="consoleTitle">Console / journal</span>
+
+        <span id="progressLabel" class="progress-label"></span>
+
+        <button type="button" class="btn ghost" id="btnClearLog" style="height:28px;padding:0 10px;font-size:0.75rem" data-i18n="btnClear">Effacer</button>
+
+      </div>
+
+      <div class="progress" id="progress"><i id="progressBar"></i></div>
+
+      <pre id="log"></pre>
+
+    </div>
+
+  </div>
+
+  <script src="vendor/chart.umd.min.js"></script>
+
+  <script src="suite-boot.js"></script>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+
+  <script src="app.js?v=20260719-pro"></script>
+
+  <script src="hub.js"></script>
+
+
+  <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('systemclean.wincleaner');</script>
+</body>
+
+</html>
+

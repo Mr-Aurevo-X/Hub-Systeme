@@ -1,0 +1,211 @@
+﻿<!DOCTYPE html>
+
+<html class="hub-inframe" lang="fr">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>PrintQueue</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+<link rel="stylesheet" href="tokens.css" />
+
+  <link rel="stylesheet" href="shell.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="stylesheet" href="progress.css" />
+
+  <style>
+
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
+
+    .field span { font-size: 0.72rem; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+
+    .field select { border-radius: 10px; border: 1px solid var(--border); background: var(--bg1); color: var(--text); padding: 0 12px; font: inherit; height: 40px; }
+
+    .panel { padding: 14px; border-radius: 12px; border: 1px solid var(--border); background: rgba(20, 20, 22, 0.7); margin-bottom: 14px; }
+
+    .panel h3 { margin: 0 0 10px; font-size: 0.72rem; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+
+    .table-wrap { overflow: auto; max-height: 280px; border: 1px solid var(--border); border-radius: 12px; background: rgba(20, 20, 22, 0.7); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+
+    th { position: sticky; top: 0; background: var(--bg2); color: var(--accent); font-weight: 600; }
+
+    td.mono { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; }
+
+    .status { margin-top: 10px; color: var(--muted); font-size: 0.8rem; }
+
+    .status.error { color: #ff6b7a; }
+
+    .btn.danger { border-color: rgba(224, 53, 69, 0.45); color: #ff6b7a; }
+
+    .btn.warn { border-color: rgba(255, 180, 60, 0.45); color: #ffc86a; }
+
+  </style>
+
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body class="theme-pc-command">
+
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+
+        <div class="brand-text">
+
+          <h1>PrintQueue</h1>
+
+          <p data-i18n="tagline">Files d'impression</p>
+
+        </div>
+
+      </div>
+
+      <span class="badge">LOCAL</span>
+
+      <div class="feature-desc">
+
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+
+        <span data-i18n="features">Liste imprimantes et travaux ; purge la file sélectionnée (confirmation).</span>
+
+      </div>
+
+      <p class="privacy-note" data-i18n="privacy">Mr-Aurevo-X ne collecte aucune donnée. Gestion locale du spouleur d'impression.</p>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+
+    </aside>
+
+    <div class="main">
+
+      <header class="page-header">
+
+        <h2 data-i18n="title">Impression</h2>
+
+        <p id="meta">—</p>
+
+      </header>
+
+      <div class="content">
+
+        <div class="panel">
+
+          <div class="row">
+
+            <button type="button" class="btn accent" id="btnRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+
+            <label class="field grow"><span data-i18n="printerLabel">Imprimante</span>
+
+              <select id="printerSelect"></select></label>
+
+            <button type="button" class="btn danger" id="btnPurge" data-i18n="btnPurge">Purger la file</button>
+
+
+
+          </div>
+
+        </div>
+
+        <div class="panel">
+
+          <h3 data-i18n="jobsTitle">Travaux en file</h3>
+
+          <div class="table-wrap">
+
+            <table>
+
+              <thead>
+
+                <tr>
+
+                  <th>ID</th>
+
+                  <th data-i18n="thDoc">Document</th>
+
+                  <th data-i18n="thUser">Utilisateur</th>
+
+                  <th data-i18n="thStatus">Statut</th>
+
+                  <th data-i18n="thPages">Pages</th>
+
+                  <th data-i18n="thTime">Soumis</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="tbody"></tbody>
+
+            </table>
+
+          </div>
+
+          <p class="muted" id="emptyHint" hidden data-i18n="emptyHint">Aucun travail en file.</p>
+
+        </div>
+
+      </div>
+
+      <div class="progress-row" id="progressRow" hidden>
+
+        <span id="progressLabel" class="progress-label"></span>
+
+        <div class="progress" id="progress"><i id="progressBar"></i></div>
+
+      </div>
+
+      <p class="status" id="status"></p>
+
+    </div>
+
+  </div>
+
+  <script src="suite-boot.js"></script>
+
+  <script src="suite-progress.js"></script>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="app.js"></script>
+
+
+  <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('admin.printqueue');</script>
+</body>
+
+</html>
+

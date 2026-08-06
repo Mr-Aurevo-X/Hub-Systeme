@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<html class="hub-inframe" lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PowerPlan</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+<link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="shell.css" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <link rel="stylesheet" href="progress.css" />
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body class="theme-pc-command">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+        <div class="brand-text">
+          <h1>PowerPlan</h1>
+          <p data-i18n="tagline">Plans d'alimentation · powercfg</p>
+        </div>
+      </div>
+      <span class="badge">LOCAL</span>
+      <div class="feature-desc" id="featureDesc">
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+        <span data-i18n="features">Liste powercfg /list, affiche le plan actif, change de plan.</span>
+      </div>
+      <p class="privacy-note" id="privacyNote" data-privacy-fr="Mr-Aurevo-X ne collecte aucune donnée. powercfg local uniquement." data-privacy-en="Mr-Aurevo-X does not collect your data. Local powercfg only.">Mr-Aurevo-X ne collecte aucune donnée. powercfg local uniquement.</p>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+    </aside>
+    <div class="main hub-main">
+      <nav class="hub-tabs" role="tablist">
+        <button type="button" class="hub-tab active" data-tab="plans" aria-selected="true">Plans</button>
+        <button type="button" class="hub-tab" data-tab="quiet" aria-selected="false">Quiet Hours</button>
+        <button type="button" class="hub-tab" data-tab="battery" aria-selected="false">Batterie</button>
+      </nav>
+      <section class="hub-panel active" data-panel="plans">
+      <header class="page-header">
+        <h2 data-i18n="title">Plans</h2>
+        <p id="meta">—</p>
+      </header>
+
+      <div class="toolbar">
+        <input type="search" id="filter" data-i18n-placeholder="filterPh" placeholder="Filtrer…" autocomplete="off" />
+        <button type="button" class="btn accent" id="btnRefresh" data-i18n="btnRefresh">Rafraîchir</button>
+        <button type="button" class="btn" id="btnSet" data-i18n="btnSet">Activer</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th data-i18n="thName">Nom</th><th>GUID</th><th data-i18n="thActive">Actif</th>
+      </tr></thead><tbody id="tbody"></tbody></table></div>
+
+            <div class="progress-row" id="progressRow" hidden>
+
+        <span id="progressLabel" class="progress-label"></span>
+
+        <div class="progress" id="progress"><i id="progressBar"></i></div>
+
+      </div>
+
+      <p class="status" id="status"></p>
+      </section>
+      <section class="hub-panel" data-panel="quiet" hidden>
+        <div class="hub-toolbar">
+          <button type="button" class="btn accent" id="btnQuietRefresh">État</button>
+          <button type="button" class="btn" id="btnQuietOff">Off</button>
+          <button type="button" class="btn" id="btnQuietPrio">Priorité</button>
+          <button type="button" class="btn" id="btnQuietAlarms">Alarmes</button>
+          <button type="button" class="btn" id="btnQuietSettings">Paramètres Windows</button>
+        </div>
+        <pre class="hub-pre" id="quietOut">—</pre>
+        <p class="status" id="quietStatus"></p>
+      </section>
+      <section class="hub-panel" data-panel="battery" hidden>
+        <div class="hub-toolbar">
+          <button type="button" class="btn accent" id="btnBattInfo">Info batterie</button>
+          <button type="button" class="btn" id="btnBattReport">Générer rapport</button>
+          <button type="button" class="btn" id="btnBattOpen" disabled>Ouvrir dossier</button>
+        </div>
+        <pre class="hub-pre" id="battOut">—</pre>
+        <p class="status" id="battStatus"></p>
+      </section>
+    </div>
+  </div>
+<script src="suite-boot.js"></script>
+
+  <script src="suite-progress.js"></script>
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+  <script src="app.js"></script>
+  <script src="hub.js"></script>
+
+  <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('admin.powerplan');</script>
+</body>
+</html>

@@ -18,9 +18,10 @@ from security import (
     ConfirmGate,
     is_probably_user_data_path,
     parse_uninstall_command,
+    safe_open_path,
     safe_resolve_under,
 )
-from suite_launch import launch_suite_app
+from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_language
 
 _HOST = Path(__file__).resolve().parent
 _MOD = _HOST / "modules"
@@ -37,9 +38,11 @@ from modules.powerplan import quiethours as mod_quiet  # noqa: E402
 from modules.wincleaner import iconcache as mod_iconcache  # noqa: E402
 from modules.wincleaner import recentfiles as mod_recent  # noqa: E402
 from modules.wincleaner import recyclebin as mod_recycle  # noqa: E402
+from modules.wincleaner.host_api import WinCleanerHostApi  # noqa: E402
 from modules.diskmap import bigfiles as mod_bigfiles  # noqa: E402
 from modules.diskmap import duplicates as mod_duplicates  # noqa: E402
 from modules.diskmap import emptyfolders as mod_empty  # noqa: E402
+from modules.diskmap.host_api import DiskMapHostApi  # noqa: E402
 
 _PROTECTED_PIDS = frozenset({0, 4})
 _PROTECTED_NAMES = frozenset(
@@ -296,10 +299,24 @@ class ProcessHubApi(_GateMixin):
         "service_action",
         "set_task_enabled",
         "create_at_logon",
+        "toggle_startup_item",
     )
 
     def __init__(self, gate: ConfirmGate) -> None:
         super().__init__(gate)
+
+    def get_suite_accent(self) -> dict:
+        return {"ok": True, "accent": resolve_suite_accent()}
+
+    def get_suite_settings(self) -> dict:
+        return {
+            "ok": True,
+            "accent": resolve_suite_accent(),
+            "language": resolve_suite_language(),
+        }
+
+    def get_suite_language(self) -> dict:
+        return {"ok": True, "language": resolve_suite_language()}
 
     @staticmethod
     def _is_protected_process(pid: int, name: str) -> bool:
@@ -314,6 +331,36 @@ class ProcessHubApi(_GateMixin):
             if stem == nstem:
                 return True
         return False
+
+    def get_memory_totals(self) -> dict:
+        script = r"""
+$ErrorActionPreference = 'Stop'
+$os = Get-CimInstance Win32_OperatingSystem
+$total = [int64]$os.TotalVisibleMemorySize * 1024
+$free = [int64]$os.FreePhysicalMemory * 1024
+$used = $total - $free
+[pscustomobject]@{
+  totalBytes = $total
+  freeBytes = $free
+  usedBytes = $used
+  percentUsed = if ($total -gt 0) { [math]::Round(100.0 * $used / $total, 1) } else { 0 }
+} | ConvertTo-Json -Compress
+"""
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+                capture_output=True,
+                timeout=30,
+                creationflags=_CREATE_NO_WINDOW,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(_decode_cli(proc.stderr) or "Get-CimInstance failed")
+            data = json.loads(proc.stdout or "{}")
+            if not isinstance(data, dict):
+                raise RuntimeError("Données mémoire invalides")
+            return {"ok": True, **data}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc)}
 
     def list_processes(self) -> dict:
         rows: list[dict[str, Any]] = []
@@ -346,6 +393,16 @@ class ProcessHubApi(_GateMixin):
         rows.sort(key=lambda r: (-r["cpu"], -r["memMb"], (r["name"] or "").lower()))
         return {"ok": True, "processes": rows, "count": len(rows)}
 
+    def prepare_kill(self, pid: int) -> dict:
+        try:
+            pid_i = int(pid)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "PID invalide", "token": None}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("kill_process", {"pid": pid_i})}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
     def kill_process(self, pid: int, token: str | None = None) -> dict:
         try:
             pid_i = int(pid)
@@ -369,6 +426,19 @@ class ProcessHubApi(_GateMixin):
             return {"ok": True, "pid": pid_i, "name": name}
         except psutil.Error as exc:
             return {"ok": False, "error": str(exc)}
+
+    def prepare_empty_working_set(self, pid: int) -> dict:
+        try:
+            pid_i = int(pid)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "PID invalide", "token": None}
+        try:
+            return {
+                "ok": True,
+                "token": self._confirm.prepare("empty_working_set", {"pid": pid_i}),
+            }
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
 
     def empty_working_set(self, pid: int, token: str | None = None) -> dict:
         try:
@@ -398,6 +468,23 @@ class ProcessHubApi(_GateMixin):
     def list_services(self) -> dict:
         return mod_svc.list_services()
 
+    def prepare_service_action(self, name: str, action: str) -> dict:
+        service = str(name or "").strip()
+        act = str(action or "").strip().lower()
+        if act not in ("start", "stop", "restart"):
+            return {"ok": False, "error": "Confirmation non requise", "token": None}
+        if mod_svc.is_critical_service(service):
+            return {
+                "ok": False,
+                "error": f"Service Windows critique protege: {service}",
+                "token": None,
+            }
+        payload = {"name": service, "action": act}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("service_action", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
     def service_action(self, name: str, action: str, token: str | None = None) -> dict:
         service = str(name or "").strip()
         act = str(action or "").strip().lower()
@@ -414,6 +501,19 @@ class ProcessHubApi(_GateMixin):
     def list_tasks(self) -> dict:
         return mod_cron.list_tasks()
 
+    def prepare_set_task_enabled(
+        self, task_name: str, task_path: str, enabled: bool
+    ) -> dict:
+        payload = {
+            "task_name": str(task_name or "").strip(),
+            "task_path": str(task_path or "").strip(),
+            "enabled": bool(enabled),
+        }
+        try:
+            return {"ok": True, "token": self._confirm.prepare("set_task_enabled", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
     def set_task_enabled(
         self, task_name: str, task_path: str, enabled: bool, token: str | None = None
     ) -> dict:
@@ -422,10 +522,29 @@ class ProcessHubApi(_GateMixin):
             "task_path": str(task_path or "").strip(),
             "enabled": bool(enabled),
         }
+        # Original StartupX UI may omit token after window.confirm — mint+consume.
+        if not token:
+            try:
+                token = self._confirm.prepare("set_task_enabled", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_task_enabled", payload, token)
         if denied is not None:
             return denied
         return mod_cron.set_task_enabled(task_name, task_path, enabled)
+
+    def prepare_create_at_logon(
+        self, task_name: str, program: str, arguments: str = ""
+    ) -> dict:
+        payload = {
+            "task_name": str(task_name or "").strip(),
+            "program": str(program or "").strip(),
+            "arguments": str(arguments or "").strip(),
+        }
+        try:
+            return {"ok": True, "token": self._confirm.prepare("create_at_logon", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
 
     def create_at_logon(
         self,
@@ -443,6 +562,219 @@ class ProcessHubApi(_GateMixin):
         if denied is not None:
             return denied
         return mod_cron.create_at_logon(task_name, program, arguments)
+
+    def list_startup(self) -> dict:
+        """StartupX Run keys + Startup folder + CIM inventory."""
+        try:
+            import winreg
+
+            disabled_suffix = ".disabled"
+            run_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            hive_map = {
+                "HKCU": winreg.HKEY_CURRENT_USER,
+                "HKLM": winreg.HKEY_LOCAL_MACHINE,
+            }
+
+            def read_run(hive_name: str) -> list[dict[str, Any]]:
+                root = hive_map.get(hive_name)
+                if root is None:
+                    return []
+                rows: list[dict[str, Any]] = []
+                try:
+                    key = winreg.OpenKey(root, run_key, 0, winreg.KEY_READ)
+                except OSError:
+                    return []
+                try:
+                    i = 0
+                    while True:
+                        try:
+                            name, value, _ = winreg.EnumValue(key, i)
+                        except OSError:
+                            break
+                        i += 1
+                        enabled = not str(name).endswith(disabled_suffix)
+                        display = (
+                            str(name)[: -len(disabled_suffix)] if not enabled else str(name)
+                        )
+                        rows.append(
+                            {
+                                "type": f"Run ({hive_name})",
+                                "name": display,
+                                "command": str(value) if value is not None else "",
+                                "path": str(value) if value is not None else "",
+                                "impact": "Registry",
+                                "enabled": enabled,
+                                "hive": hive_name,
+                                "regName": str(name),
+                                "toggleable": True,
+                            }
+                        )
+                finally:
+                    winreg.CloseKey(key)
+                return rows
+
+            appdata = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+            folder = (
+                Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+            )
+            folder_rows: list[dict[str, Any]] = []
+            if folder.is_dir():
+                try:
+                    for name in os.listdir(folder):
+                        if name.startswith("."):
+                            continue
+                        full = folder / name
+                        enabled = True
+                        display = name
+                        if name.lower().endswith(disabled_suffix):
+                            enabled = False
+                            display = name[: -len(disabled_suffix)]
+                        lower = name.lower()
+                        toggleable = lower.endswith(".lnk") or lower.endswith(".lnk.disabled")
+                        folder_rows.append(
+                            {
+                                "type": "Startup folder",
+                                "name": display,
+                                "command": str(full),
+                                "path": str(full),
+                                "impact": "Folder",
+                                "enabled": enabled,
+                                "hive": "",
+                                "regName": "",
+                                "toggleable": toggleable,
+                            }
+                        )
+                except OSError:
+                    pass
+
+            items: list[dict[str, Any]] = []
+            items.extend(read_run("HKCU"))
+            items.extend(read_run("HKLM"))
+            items.extend(folder_rows)
+            items.sort(key=lambda r: ((r.get("type") or ""), (r.get("name") or "").lower()))
+            return {"ok": True, "items": items, "count": len(items)}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": str(exc), "items": [], "count": 0}
+
+    def toggle_startup_item(self, item: dict | None = None, token: str | None = None) -> dict:
+        if not isinstance(item, dict):
+            return {"ok": False, "error": "Item invalide"}
+        payload = {"item": item}
+        if not token:
+            try:
+                token = self._confirm.prepare("toggle_startup_item", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
+        denied = self._consume("toggle_startup_item", payload, token)
+        if denied is not None:
+            return denied
+        # Delegate to StartupX-compatible logic via subprocess rename / reg
+        item_type = str(item.get("type") or "")
+        enable_raw = item.get("enable")
+        if enable_raw is None:
+            enable = not bool(item.get("enabled", True))
+        else:
+            enable = bool(enable_raw)
+        if item_type.startswith("Run ("):
+            return self._toggle_run_key(
+                str(item.get("hive") or "").strip().upper(),
+                str(item.get("regName") or item.get("name") or "").strip(),
+                enable,
+            )
+        if item_type == "Startup folder":
+            return self._toggle_startup_folder(str(item.get("path") or ""), enable)
+        return {
+            "ok": False,
+            "error": "Type non modifiable — utilisez les tâches planifiées",
+            "readOnly": True,
+        }
+
+    def _toggle_run_key(self, hive: str, name: str, enable: bool) -> dict:
+        import winreg
+
+        disabled_suffix = ".disabled"
+        run_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+        hive_map = {"HKCU": winreg.HKEY_CURRENT_USER, "HKLM": winreg.HKEY_LOCAL_MACHINE}
+        if hive not in hive_map or not name:
+            return {"ok": False, "error": "Hive/nom invalide"}
+        try:
+            key = winreg.OpenKey(
+                hive_map[hive], run_key, 0, winreg.KEY_READ | winreg.KEY_SET_VALUE
+            )
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
+        try:
+            if enable:
+                src = name if name.endswith(disabled_suffix) else name + disabled_suffix
+                dst = name[: -len(disabled_suffix)] if name.endswith(disabled_suffix) else name
+            else:
+                src = name[: -len(disabled_suffix)] if name.endswith(disabled_suffix) else name
+                dst = src + disabled_suffix
+            try:
+                value, vtype = winreg.QueryValueEx(key, src)
+            except OSError:
+                try:
+                    winreg.QueryValueEx(key, dst)
+                    return {"ok": True, "name": dst, "enabled": enable, "noop": True}
+                except OSError:
+                    return {"ok": False, "error": "Cle introuvable"}
+            if src == dst:
+                return {"ok": True, "name": dst, "enabled": enable, "noop": True}
+            try:
+                winreg.SetValueEx(key, dst, 0, vtype, value)
+                winreg.DeleteValue(key, src)
+            except OSError as exc:
+                return {"ok": False, "error": str(exc)}
+            return {"ok": True, "name": dst, "enabled": enable}
+        finally:
+            winreg.CloseKey(key)
+
+    def _toggle_startup_folder(self, path: str, enable: bool) -> dict:
+        disabled_suffix = ".disabled"
+        appdata = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+        root = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+        p = safe_resolve_under(path, [root])
+        if p is None or not p.is_file():
+            return {"ok": False, "error": "Chemin Startup invalide"}
+        name = p.name
+        currently_disabled = name.lower().endswith(disabled_suffix)
+        if enable:
+            if not currently_disabled:
+                return {"ok": True, "path": str(p), "enabled": True, "noop": True}
+            dst = p.with_name(name[: -len(disabled_suffix)])
+        else:
+            if currently_disabled:
+                return {"ok": True, "path": str(p), "enabled": False, "noop": True}
+            dst = p.with_name(name + disabled_suffix)
+        if safe_resolve_under(dst, [root]) is None:
+            return {"ok": False, "error": "Cible hors dossier Startup"}
+        if dst.exists():
+            return {"ok": False, "error": f"Cible existe deja: {dst.name}"}
+        try:
+            p.rename(dst)
+            return {"ok": True, "path": str(dst), "enabled": enable, "name": dst.name}
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def open_path(self, path: str) -> dict:
+        path = (path or "").strip()
+        if not path:
+            return {"ok": False, "error": "Chemin vide"}
+        raw = path.strip().strip('"')
+        candidate = raw.split(" /")[0].split(" -")[0].strip().strip('"')
+        try:
+            p = Path(candidate if candidate else raw).expanduser()
+        except (OSError, RuntimeError):
+            return {"ok": False, "error": "Chemin invalide"}
+        folder = p if p.is_dir() else p.parent
+        safe, err = safe_open_path(folder, deny_exec=True)
+        if safe is None:
+            return {"ok": False, "error": err or "Chemin refuse"}
+        try:
+            os.startfile(str(safe))  # type: ignore[attr-defined]
+            return {"ok": True}
+        except OSError as exc:
+            return {"ok": False, "error": str(exc)}
 
     def open_dedicated(self, name: str = "ProcessGuard") -> dict:
         app = (name or "ProcessGuard").strip()
@@ -485,6 +817,11 @@ class PowerPlanApi(_GateMixin):
         if not re.fullmatch(r"[0-9a-fA-F-]{36}", guid_s):
             return {"ok": False, "error": "GUID invalide"}
         payload = {"guid": guid_s}
+        if not token:
+            try:
+                token = self._confirm.prepare("set_plan", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_plan", payload, token)
         if denied is not None:
             return denied
@@ -510,6 +847,11 @@ class PowerPlanApi(_GateMixin):
         except (TypeError, ValueError):
             return {"ok": False, "error": "mode invalide"}
         payload = {"mode": mode_i}
+        if not token:
+            try:
+                token = self._confirm.prepare("set_focus_assist", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_focus_assist", payload, token)
         if denied is not None:
             return denied
@@ -583,6 +925,11 @@ foreach ($p in Get-Printer -ErrorAction SilentlyContinue) {
         if not name:
             return {"ok": False, "error": "Nom d'imprimante requis"}
         payload = {"printer_name": name}
+        if not token:
+            try:
+                token = self._confirm.prepare("purge_printer_jobs", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("purge_printer_jobs", payload, token)
         if denied is not None:
             return denied
@@ -651,6 +998,11 @@ $rows | ConvertTo-Json -Compress -Depth 3
             return {"ok": False, "error": "Administrateur requis", "admin": False}
         desc = (description or "").strip() or "Mr-Aurevo-X RestorePoint"
         payload = {"description": desc}
+        if not token:
+            try:
+                token = self._confirm.prepare("create_restore_point", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("create_restore_point", payload, token)
         if denied is not None:
             return denied
@@ -671,6 +1023,9 @@ Checkpoint-Computer -Description '{safe}' -RestorePointType MODIFY_SETTINGS
             return {"ok": True, "description": desc, "admin": True}
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc), "admin": _is_admin()}
+
+    def is_admin(self) -> dict:
+        return {"ok": True, "admin": _is_admin()}
 
     def open_dedicated(self) -> dict:
         return launch_suite_app("RestorePoint")
@@ -748,6 +1103,11 @@ if (-not $rows.Count) {
         if sid <= 0:
             return {"ok": False, "error": "ID de session invalide"}
         payload = {"session_id": sid}
+        if not token:
+            try:
+                token = self._confirm.prepare("logoff_session", payload)
+            except ValueError as exc:
+                return {"ok": False, "error": str(exc)}
         denied = self._consume("logoff_session", payload, token)
         if denied is not None:
             return denied
@@ -768,6 +1128,9 @@ if (-not $rows.Count) {
             return {"ok": True, "sessionId": sid, "admin": _is_admin()}
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc), "admin": _is_admin()}
+
+    def is_admin(self) -> dict:
+        return {"ok": True, "admin": _is_admin()}
 
     def open_dedicated(self) -> dict:
         return launch_suite_app("UserSessions")
@@ -809,8 +1172,10 @@ class SystemCleanApi(_GateMixin):
     def __init__(self, gate: ConfirmGate) -> None:
         super().__init__(gate)
         self.apps = ["WinCleaner", "DiskMap"]
+        self.wincleaner = WinCleanerHostApi(gate)
+        self.diskmap = DiskMapHostApi()
 
-    # WinCleaner mutators
+    # WinCleaner mutators (flat shortcuts — prefer .wincleaner for full API)
     def list_recycle_bin(self) -> dict:
         return mod_recycle.list_recycle_bin()
 
@@ -835,43 +1200,9 @@ class SystemCleanApi(_GateMixin):
             return denied
         return mod_recent.clear_recent()
 
-    # DiskMap helpers
+    # DiskMap helpers (flat — also on .diskmap)
     def list_drives(self) -> dict:
-        drives: list[dict[str, Any]] = []
-        for letter in string.ascii_uppercase:
-            root = f"{letter}:\\"
-            if not os.path.exists(root):
-                continue
-            try:
-                usage = shutil.disk_usage(root)
-                drives.append(
-                    {
-                        "letter": letter,
-                        "path": root,
-                        "label": f"{letter}:",
-                        "total": usage.total,
-                        "used": usage.used,
-                        "free": usage.free,
-                        "totalLabel": _fmt_bytes(usage.total),
-                        "usedLabel": _fmt_bytes(usage.used),
-                        "freeLabel": _fmt_bytes(usage.free),
-                    }
-                )
-            except OSError:
-                drives.append(
-                    {
-                        "letter": letter,
-                        "path": root,
-                        "label": f"{letter}:",
-                        "total": 0,
-                        "used": 0,
-                        "free": 0,
-                        "totalLabel": "—",
-                        "usedLabel": "—",
-                        "freeLabel": "—",
-                    }
-                )
-        return {"ok": True, "drives": drives, "count": len(drives)}
+        return self.diskmap.list_drives()
 
     def scan_large(self, root: str = "", top_n: int = 30, min_mb: float = 50) -> dict:
         return mod_bigfiles.scan_large(root or str(Path.home()), top_n=top_n, min_mb=min_mb)

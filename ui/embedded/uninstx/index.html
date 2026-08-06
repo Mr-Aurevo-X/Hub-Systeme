@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="hub-inframe" lang="fr">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>UninstX</title>
+
+  <link rel="stylesheet" href="vendor/pc-command-kit/tokens/kit.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/embed.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/standalone.css" />
+  <link rel="stylesheet" href="vendor/pc-command-kit/components/tool-chrome.css" />
+
+  <link rel="stylesheet" href="fonts/fonts.css" />
+
+  <link rel="stylesheet" href="tokens.css" />
+
+  <link rel="stylesheet" href="shell.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <script>
+    (function () {
+      try {
+        if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search || "")) {
+          document.documentElement.classList.add("pcd-embed");
+          document.addEventListener("DOMContentLoaded", function () {
+            if (document.body) document.body.classList.add("pcd-embed");
+          });
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body class="theme-pc-command">
+
+  <div class="bg" aria-hidden="true"></div>
+
+  <div class="shell">
+
+
+
+    <aside class="sidebar">
+
+      <div class="brand">
+
+        <img class="brand-mark" src="app-icon.svg" width="40" height="40" alt="" />
+
+        <div class="brand-text">
+
+          <h1>UninstX</h1>
+
+          <p data-i18n="tagline">Gestionnaire de désinstallation</p>
+
+        </div>
+
+      </div>
+
+      <span class="badge">LOCAL</span>
+
+      <div class="feature-desc">
+
+        <strong data-i18n="featuresTitle">Fonctions</strong>
+
+        <span data-i18n="features">Liste les programmes installés (registre Windows), désinstalle avec confirmation, scanne les fichiers résiduels.</span>
+
+      </div>
+
+      <p class="privacy-note" id="privacyNote">Mr-Aurevo-X ne collecte aucune donnée. Gestion locale uniquement.</p>
+
+      <p class="copyright" data-i18n="copyright">© 2026 Mr-Aurevo-X · local · CGU dans L'Atelier PC Command</p>
+
+    </aside>
+
+
+
+    <div class="main">
+
+      <header class="page-header">
+
+        <h2 data-i18n="title">UninstX</h2>
+
+        <p data-i18n="subtitle">Programmes installés — désinstallation avec confirmation.</p>
+
+      </header>
+
+
+
+      <div class="content">
+
+
+
+        <!-- Toolbar -->
+
+        <div class="toolbar-panel panel">
+
+          <div class="toolbar-row">
+
+            <div class="search-wrap">
+
+              <input type="search" id="searchInput"
+
+                data-i18n-placeholder="searchPh" placeholder="Filtrer par nom ou éditeur…"
+
+                autocomplete="off" />
+
+            </div>
+
+            <button type="button" class="btn accent" id="btnRefresh" data-i18n="btnRefresh">Actualiser</button>
+
+          </div>
+
+          <p class="apps-meta muted" id="appsMeta"></p>
+
+        </div>
+
+
+
+        <!-- Apps table -->
+
+        <div class="panel apps-panel" id="appsPanel">
+
+          <div id="loadingState" class="empty-state">
+
+            <span data-i18n="loading">Chargement…</span>
+
+          </div>
+
+          <div id="emptyState" class="empty-state" hidden>
+
+            <span data-i18n="noApps">Aucun programme trouvé.</span>
+
+          </div>
+
+          <div class="table-wrap" id="tableWrap" hidden>
+
+            <table class="apps-table">
+
+              <thead>
+
+                <tr>
+
+                  <th data-i18n="colName">Nom</th>
+
+                  <th data-i18n="colVersion">Version</th>
+
+                  <th data-i18n="colPublisher">Éditeur</th>
+
+                  <th data-i18n="colHive">Source</th>
+
+                  <th data-i18n="colActions">Actions</th>
+
+                </tr>
+
+              </thead>
+
+              <tbody id="appsBody"></tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+
+
+        <!-- Leftovers panel -->
+
+        <div class="panel leftovers-panel" id="leftoversPanel" hidden>
+
+          <div class="leftovers-header">
+
+            <h3 id="leftoversTitle" data-i18n="leftoversTitle">Fichiers résiduels</h3>
+
+            <button type="button" class="btn ghost" id="btnCloseLeftovers" title="Fermer">✕</button>
+
+          </div>
+
+          <p class="leftovers-app muted" id="leftoversApp"></p>
+
+          <div id="leftoversBody" class="leftovers-body"></div>
+
+        </div>
+
+
+
+      </div><!-- .content -->
+
+
+
+      <!-- Confirm dialog overlay -->
+
+      <div class="confirm-overlay" id="confirmOverlay" hidden>
+
+        <div class="confirm-box">
+
+          <h3 data-i18n="confirmTitle">Confirmer la désinstallation</h3>
+
+          <p id="confirmMsg"></p>
+
+          <div class="btn-row" style="margin-top:16px;justify-content:flex-end">
+
+            <button type="button" class="btn" id="btnConfirmCancel" data-i18n="btnConfirmCancel">Annuler</button>
+
+            <button type="button" class="btn danger" id="btnConfirmOk" data-i18n="btnConfirmOk">Désinstaller</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <p class="status" id="status"></p>
+
+    </div><!-- .main -->
+
+
+
+  </div><!-- .shell -->
+
+  <script src="suite-boot.js"></script>
+
+  <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
+    <script src="../hub-api-shim.js"></script>
+  <script>HubApiShim.install('uninstx');</script>
+<script src="app.js"></script>
+
+</body>
+
+</html>
+
