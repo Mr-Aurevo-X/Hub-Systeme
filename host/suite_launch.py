@@ -56,7 +56,18 @@ def resolve_suite_language(default: str = "fr") -> str:
 
 
 def _suite_candidate_roots() -> list[Path]:
-    roots = [app_dir().resolve().parent]
+    roots: list[Path] = []
+    try:
+        app_parent = app_dir().resolve().parent
+        roots.append(app_parent)
+        # Hubs live under Atelier; Lab tools are siblings under Dev Central Tree.
+        tree = app_parent.parent
+        for rel in ("L'Atelier Windows", "Lab", "AtelierWindows"):
+            cand = tree / rel
+            if cand.is_dir():
+                roots.append(cand.resolve())
+    except OSError:
+        pass
     for key in ("MRAUREVOX_SUITE_ROOT", "MRAUREVOX_DEV_ROOT", "MRAUREVOX_APPS_ROOT"):
         raw = (os.environ.get(key) or "").strip()
         if raw:
@@ -130,32 +141,42 @@ def resolve_suite_app_cmd(name: str) -> Path | None:
         f"Lancer.{app_name}.cmd",
         f"{app_name}.cmd",
     )
+    unmarked: list[Path] = []
     for root in _suite_candidate_roots():
         folder = _app_folder(root, app_name)
         if folder is None:
             continue
         for fname in candidates:
             p = folder / fname
-            if p.is_file() and _cmd_has_launcher_mark(p):
+            if not p.is_file():
+                continue
+            if _cmd_has_launcher_mark(p):
                 return p
+            unmarked.append(p)
         # any Lancer*.cmd with mark
         for p in sorted(folder.glob("Lancer*.cmd")):
-            if p.is_file() and _cmd_has_launcher_mark(p):
+            if not p.is_file():
+                continue
+            if _cmd_has_launcher_mark(p):
                 return p
-    return None
+            unmarked.append(p)
+    # Lab / legacy launchers often omit the Suite mark — still launch Lancer.cmd.
+    return unmarked[0] if unmarked else None
 
 
 def resolve_suite_app_python_host(name: str) -> Path | None:
     app_name = _safe_app_name(name)
     if not app_name:
         return None
+    slug = app_name.lower().replace("-", "_").replace(" ", "_")
     for root in _suite_candidate_roots():
         folder = _app_folder(root, app_name)
         if folder is None:
             continue
         for rel in (
             Path("host") / "host.py",
-            Path("host") / f"{app_name.lower()}_host.py",
+            Path("host") / f"{slug}_host.py",
+            Path(f"{slug}_host.py"),
             Path("host.py"),
         ):
             p = folder / rel
