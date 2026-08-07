@@ -14,6 +14,7 @@ const TITLES = {
 
 const cache = Object.create(null);
 let currentView = "dashboard";
+let currentDash = null;
 let currentSegment = "";
 
 function apiRoot() {
@@ -73,11 +74,16 @@ async function showView(viewId) {
   setActiveNav(id);
   await setTitle(id);
   root.dataset.view = id;
+
+  if (currentDash && typeof currentDash.unmount === "function") {
+    try { currentDash.unmount(); } catch (_) {}
+    currentDash = null;
+  }
   root.innerHTML = "";
 
   if (id === "dashboard") {
-    const mod = await import("./dashboard.js");
-    await mod.mount(root);
+    currentDash = await import("./dashboard.js");
+    await currentDash.mount(root);
   } else {
     if (!cache[id]) {
       cache[id] = await import(`./modules/${id}.js`);

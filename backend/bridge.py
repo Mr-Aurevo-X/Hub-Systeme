@@ -1,6 +1,8 @@
 """Hub-Systeme namespace APIs — Couche B H4 (in-process)."""
 from __future__ import annotations
 
+import ctypes
+
 import json
 import os
 import re
@@ -1257,6 +1259,15 @@ class DashboardApi:
     def __init__(self, hub: "Api") -> None:
         self._hub = hub
 
+    def get_metrics_url(self) -> dict:
+        """URL of embedded localhost metrics API for Accueil live UI."""
+        host = getattr(self._hub, "_metrics_host", "127.0.0.1") or "127.0.0.1"
+        port = int(getattr(self._hub, "_metrics_port", 0) or 0)
+        if port <= 0:
+            return {"ok": False, "url": "", "error": "metrics offline"}
+        return {"ok": True, "url": f"http://{host}:{port}/api/metrics"}
+
+
     def get_kpis(self) -> dict:
         disk_free_gb = None
         disk_total_gb = None
@@ -1317,6 +1328,8 @@ class Api(WindowChromeMixin):
         self._window: Any = None
         self._maximized = False
         self._confirm = ConfirmGate(ttl_seconds=90.0)
+        self._metrics_host = "127.0.0.1"
+        self._metrics_port = 0
         self.dashboard = DashboardApi(self)
         self.systemclean = SystemCleanApi(self._confirm)
         self.processhub = ProcessHubApi(self._confirm)
@@ -1389,6 +1402,12 @@ class Api(WindowChromeMixin):
 
     def is_admin(self) -> dict:
         return {"ok": True, "admin": _is_admin()}
+
+
+    def set_metrics_endpoint(self, host: str = "127.0.0.1", port: int = 0) -> dict:
+        self._metrics_host = host or "127.0.0.1"
+        self._metrics_port = int(port or 0)
+        return {"ok": True, "host": self._metrics_host, "port": self._metrics_port}
 
     def set_window_title(self, title: str = "") -> dict:
         title = (title or "").strip() or HUB_TITLE
