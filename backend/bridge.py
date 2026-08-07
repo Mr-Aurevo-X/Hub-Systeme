@@ -45,6 +45,7 @@ from tools.diskmap import bigfiles as mod_bigfiles  # noqa: E402
 from tools.diskmap import duplicates as mod_duplicates  # noqa: E402
 from tools.diskmap import emptyfolders as mod_empty  # noqa: E402
 from tools.diskmap.host_api import DiskMapHostApi  # noqa: E402
+from tools.ramcleaner import RamCleanerApi  # noqa: E402
 
 _PROTECTED_PIDS = frozenset({0, 4})
 _PROTECTED_NAMES = frozenset(
@@ -1332,6 +1333,7 @@ class Api(WindowChromeMixin):
         self._metrics_port = 0
         self.dashboard = DashboardApi(self)
         self.systemclean = SystemCleanApi(self._confirm)
+        self.ramcleaner = RamCleanerApi(self._confirm)
         self.processhub = ProcessHubApi(self._confirm)
         self.uninstx = UninstXApi(self._confirm)
         self.sysinspect = SysInspectApi()
@@ -1358,8 +1360,14 @@ class Api(WindowChromeMixin):
             {
                 "id": "systemclean",
                 "label": "SystemClean",
-                "desc": "Cleanup, disque, RAM (WinCleaner · DiskMap)",
+                "desc": "Cleanup, disque (WinCleaner · DiskMap)",
                 "apps": self.systemclean.apps,
+            },
+            {
+                "id": "ramcleaner",
+                "label": "RamCleaner",
+                "desc": "Conseiller mémoire — analyse, trim, fin de tâche (ConfirmGate)",
+                "apps": ["Ram Cleaner"],
             },
             {
                 "id": "processhub",

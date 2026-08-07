@@ -1,0 +1,29 @@
+# Never recommend kill / never kill (basename, case-insensitive)
+System
+smss.exe
+csrss.exe
+wininit.exe
+winlogon.exe
+services.exe
+lsass.exe
+svchost.exe
+lsm.exe
+fontdrvhost.exe
+dwm.exe
+Memory Compression
+Registry
+Secure System
+MsMpEng.exe
+NisSrv.exe
+explorer.exe
+sihost.exe
+taskhostw.exe
+RuntimeBroker.exe
+SearchHost.exe
+StartMenuExperienceHost.exe
+ShellExperienceHost.exe
+ctfmon.exe
+conhost.exe
+winlogon.exe
+LsaIso.exe
+SecurityHealthService.exe

@@ -7,6 +7,7 @@ Hub catégorie **Système** — Couche B + H7 native + flatten `host.py` / `back
 | Module | Source fusionnée | ConfirmGate |
 |--------|------------------|-------------|
 | SystemClean | WinCleaner · DiskMap | empty_recycle_bin · rebuild_icon_cache · clear_recent_files · delete_large_file · delete_empty_folder · trash_dup_paths |
+| RamCleaner | Lab/Ram Cleaner | kill_selected · trim_selected (`api.ramcleaner.*`) |
 | ProcessHub | ProcessGuard · StartupX | kill_process · empty_working_set · service_action · set_task_enabled · create_at_logon |
 | UninstX | UninstX | uninstall_app |
 | SysInspect | SysInspect | — (lecture seule) |
@@ -39,4 +40,4 @@ ui/dashboard.js         # home KPIs
 ui/modules/*.js         # UIs Couche B / H7
 ```
 
-Titres HWND : `L'Atelier PC Command — Système` / `[Module|Segment]`.
+Titres HWND : `PC Command | System` / `[Module|Segment]` (ex. `[RamCleaner]`).

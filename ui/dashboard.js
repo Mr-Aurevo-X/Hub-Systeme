@@ -15,6 +15,12 @@ const FALLBACK_MODULES = [
     ico: "⌫",
   },
   {
+    id: "ramcleaner",
+    label: "RamCleaner",
+    desc: "Conseiller mémoire — analyse, trim, fin de tâche (ConfirmGate)",
+    ico: "▣",
+  },
+  {
     id: "processhub",
     label: "ProcessHub",
     desc: "Processus, services, démarrage et tâches planifiées",

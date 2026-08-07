@@ -1,0 +1,40 @@
+[
+  {
+    "id": "nvidia-overlay",
+    "matchNames": ["NVIDIA Overlay.exe", "NVIDIA Overlay"],
+    "title": "NVIDIA Overlay",
+    "reason": "Overlay GeForce souvent inutile hors jeu",
+    "tier": "recommend",
+    "requireNoFullscreenGame": true
+  },
+  {
+    "id": "guns-lol",
+    "matchNames": ["guns.lol Image Host.exe", "guns.lol Image Host"],
+    "title": "guns.lol Image Host",
+    "reason": "Hébergeur d'images en arrière-plan",
+    "tier": "recommend"
+  },
+  {
+    "id": "snipping-tool",
+    "matchNames": ["SnippingTool.exe", "ScreenClippingHost.exe"],
+    "title": "Outil Capture d'écran",
+    "reason": "Utilitaire de capture probablement oublié ouvert",
+    "tier": "recommend",
+    "minAgeSeconds": 300,
+    "maxCpuPercent": 2.0
+  },
+  {
+    "id": "steam-idle",
+    "matchNames": ["steamwebhelper.exe"],
+    "title": "Steam (webhelper)",
+    "reason": "Steam en arrière-plan si aucun jeu lancé",
+    "tier": "caution"
+  },
+  {
+    "id": "libre-hw",
+    "matchNames": ["LibreHardwareMonitor.exe"],
+    "title": "LibreHardwareMonitor",
+    "reason": "Surveillance capteurs — utile seulement si tu surveilles",
+    "tier": "caution"
+  }
+]

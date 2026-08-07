@@ -1,0 +1,248 @@
+/* RamCleaner — native in-hub (Lab SoT parity) */
+
+.hub-ramcleaner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  height: 100%;
+}
+
+.hub-ramcleaner .rc-hero {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hub-ramcleaner .rc-meter {
+  min-width: 240px;
+  flex: 0 1 300px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  background: var(--panel, rgba(12, 14, 20, 0.45));
+}
+
+.hub-ramcleaner .rc-meter-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.hub-ramcleaner .rc-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.hub-ramcleaner .rc-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent, #e03545), #ff6b7a);
+  transition: width 0.35s ease;
+}
+
+.hub-ramcleaner .rc-detail {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hub-ramcleaner .rc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.hub-ramcleaner .rc-toolbar .status {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.hub-ramcleaner .rc-panels {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 14px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .hub-ramcleaner .rc-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hub-ramcleaner .rc-panel {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  background: var(--panel, rgba(12, 14, 20, 0.45));
+  padding: 12px 14px 14px;
+}
+
+.hub-ramcleaner .rc-panel-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+}
+
+.hub-ramcleaner .rc-panel-sub {
+  margin: 4px 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.hub-ramcleaner .rc-panel-head-spaced {
+  margin-top: 18px;
+}
+
+.hub-ramcleaner .rc-list,
+.hub-ramcleaner .rc-fam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-ramcleaner .rc-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.hub-ramcleaner .rc-card.caution {
+  opacity: 0.92;
+}
+
+.hub-ramcleaner .rc-card input[type="checkbox"] {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent, #e03545);
+}
+
+.hub-ramcleaner .rc-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.hub-ramcleaner .rc-reason {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.hub-ramcleaner .rc-meta {
+  font-size: 0.78rem;
+  color: var(--accent, #e03545);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hub-ramcleaner .rc-fam-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.hub-ramcleaner .rc-fam-row span:last-child {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-ramcleaner .rc-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 8px 2px;
+}
+
+.hub-ramcleaner .rc-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-ramcleaner .rc-skel-row {
+  height: 52px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: rc-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes rc-pulse {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.hub-ramcleaner .confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.hub-ramcleaner .confirm-overlay[hidden] {
+  display: none !important;
+}
+
+.hub-ramcleaner .confirm-box {
+  width: min(420px, 92%);
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--panel, #12141c);
+}
+
+.hub-ramcleaner .confirm-box h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.hub-ramcleaner .confirm-box p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  white-space: pre-line;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.hub-ramcleaner .confirm-box .btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

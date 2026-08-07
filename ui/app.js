@@ -6,6 +6,7 @@ const HUB_NAME = "PC Command | System";
 const TITLES = {
   dashboard: HUB_NAME,
   systemclean: `${HUB_NAME} [SystemClean]`,
+  ramcleaner: `${HUB_NAME} [RamCleaner]`,
   processhub: `${HUB_NAME} [ProcessHub]`,
   uninstx: `${HUB_NAME} [UninstX]`,
   sysinspect: `${HUB_NAME} [SysInspect]`,
