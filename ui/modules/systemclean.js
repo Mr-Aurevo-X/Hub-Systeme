@@ -114,6 +114,12 @@ export async function mount(root) {
 
 async function renderSegment(id, body, ctx) {
   const { setStatus, askConfirm, setProgress } = ctx;
+  if (typeof body._dmCleanup === "function") {
+    try {
+      body._dmCleanup();
+    } catch (_) {}
+    body._dmCleanup = null;
+  }
   body.innerHTML = `<div class="empty-state">Chargement…</div>`;
 
   try {
@@ -778,107 +784,610 @@ function dmFilesFromProgress(prog) {
   return [];
 }
 
+/* DiskMap Map — squarified treemap (Bruls et al.), ported from DiskMap/ui/app.js SoT */
+const DM_TOP_N = 12;
+const DM_PALETTE = [
+  "#e03545", "#c43a4a", "#a84555", "#8b5568", "#6d6578",
+  "#5a7080", "#4a7a72", "#6a6a40", "#8a5a3a", "#9a4050",
+  "#704858", "#556070", "#7a4058", "#405868",
+];
+
 async function mountDiskMap(body, api, setStatus, setProgress) {
+  if (typeof body._dmCleanup === "function") {
+    try {
+      body._dmCleanup();
+    } catch (_) {}
+    body._dmCleanup = null;
+  }
   body.innerHTML = `
-    <div class="hub-inhub-scroll">
-      <div class="panel">
+    <div class="dm-map-shell">
+      <div class="panel dm-toolbar">
         <div class="toolbar-row">
           <strong>Carte disque</strong>
-          <button type="button" class="btn" id="dmDrives">Lecteurs</button>
-          <button type="button" class="btn" id="dmPick">Choisir dossier</button>
-          <button type="button" class="btn accent" id="dmScan">Scanner</button>
-          <button type="button" class="btn ghost" id="dmCancel">Annuler</button>
+          <select id="dmDrive" style="min-width:220px"></select>
+          <button type="button" class="btn" id="dmPick">Dossier…</button>
+          <button type="button" class="btn accent" id="dmScan">Analyser</button>
+          <button type="button" class="btn danger" id="dmCancel" disabled>Annuler</button>
         </div>
-        <div class="search-wrap" style="margin-top:10px"><input type="text" id="dmPath" placeholder="Chemin à scanner (ex. C:\\)" /></div>
-        <p class="meta" id="dmMeta" style="margin-top:8px"></p>
+        <div class="dm-stats">
+          <div class="stat"><div class="label">Libre</div><div class="value" id="dmFree">—</div></div>
+          <div class="stat"><div class="label">Utilisé</div><div class="value" id="dmUsed">—</div></div>
+          <div class="stat"><div class="label">Analysé</div><div class="value" id="dmScanned">—</div></div>
+        </div>
+        <nav class="dm-crumbs" id="dmCrumbs" aria-label="breadcrumb"></nav>
+        <p class="dm-nav-hint">Clic = sélection · double-clic = ouvrir · clic droit = remonter</p>
       </div>
-      <div class="panel flex-fill" style="padding:0;min-height:240px">
-        <div class="table-wrap">
-          <table class="data"><thead><tr><th>Nom</th><th>Chemin</th><th>Taille</th><th></th></tr></thead><tbody id="dmBody"></tbody></table>
+      <div class="dm-workspace">
+        <div class="dm-map-wrap">
+          <canvas id="treemap" width="800" height="600" aria-label="Treemap"></canvas>
+          <div class="dm-map-hint" id="dmMapHint">Le treemap apparaîtra ici après l'analyse.</div>
         </div>
+        <aside class="dm-side">
+          <h2>Top éléments</h2>
+          <p class="dm-side-sub" id="dmSideSub">Niveau actuel</p>
+          <ul class="dm-top-list" id="dmTopList"></ul>
+          <button type="button" class="btn accent full" id="dmOpen" disabled>Ouvrir dans l'Explorateur</button>
+        </aside>
       </div>
     </div>`;
 
-  document.getElementById("dmDrives").onclick = async () => {
-    const res = unwrapData(await api.list_drives());
-    const drives = res?.drives || res?.items || res?.data?.drives || [];
-    document.getElementById("dmBody").innerHTML = (drives || [])
-      .map(
-        (d) =>
-          `<tr><td>${esc(d.name || d.letter || d.path)}</td><td class="wrap">${esc(d.path || d.root || "")}</td><td>${esc(
-            d.freeText || fmtBytes(d.free || d.freeBytes || 0)
-          )} libres</td><td><button type="button" class="action-btn" data-path="${esc(
-            d.path || d.root || d.name
-          )}">Scanner</button></td></tr>`
-      )
-      .join("");
-    document.getElementById("dmMeta").textContent = `${drives.length} lecteur(s)`;
-    setStatus("Lecteurs chargés.", "ok");
+  const el = {
+    driveSelect: body.querySelector("#dmDrive"),
+    btnPick: body.querySelector("#dmPick"),
+    btnAnalyze: body.querySelector("#dmScan"),
+    btnCancel: body.querySelector("#dmCancel"),
+    btnOpen: body.querySelector("#dmOpen"),
+    stFree: body.querySelector("#dmFree"),
+    stUsed: body.querySelector("#dmUsed"),
+    stScanned: body.querySelector("#dmScanned"),
+    crumbs: body.querySelector("#dmCrumbs"),
+    canvas: body.querySelector("#treemap"),
+    mapHint: body.querySelector("#dmMapHint"),
+    topList: body.querySelector("#dmTopList"),
+    sideSub: body.querySelector("#dmSideSub"),
   };
 
-  document.getElementById("dmBody").addEventListener("click", (ev) => {
-    const btn = ev.target.closest("[data-path]");
-    if (!btn) return;
-    document.getElementById("dmPath").value = btn.getAttribute("data-path");
-    document.getElementById("dmScan").click();
-  });
+  const state = {
+    scanPath: null,
+    root: null,
+    stack: [],
+    layout: [],
+    selected: null,
+    hover: null,
+    layoutKey: "",
+    paintScheduled: false,
+    scanning: false,
+    cancelled: false,
+  };
 
-  document.getElementById("dmPick").onclick = async () => {
+  const roCleanups = [];
+
+  function currentNode() {
+    if (!state.stack.length) return null;
+    return state.stack[state.stack.length - 1];
+  }
+
+  function worst(rowAreas, length) {
+    if (!rowAreas.length) return Infinity;
+    let s = 0, max = 0, min = Infinity;
+    for (const a of rowAreas) {
+      s += a;
+      if (a > max) max = a;
+      if (a < min) min = a;
+    }
+    const s2 = s * s;
+    const l2 = length * length;
+    return Math.max((l2 * max) / s2, s2 / (l2 * min));
+  }
+
+  function layoutRow(items, x, y, w, h, horizontal, out) {
+    const total = items.reduce((acc, it) => acc + it.area, 0) || 1;
+    if (horizontal) {
+      let cx = x;
+      for (const it of items) {
+        const ww = (it.area / total) * w;
+        out.push({ node: it.node, x: cx, y, w: Math.max(0, ww), h, color: it.color });
+        cx += ww;
+      }
+    } else {
+      let cy = y;
+      for (const it of items) {
+        const hh = (it.area / total) * h;
+        out.push({ node: it.node, x, y: cy, w, h: Math.max(0, hh), color: it.color });
+        cy += hh;
+      }
+    }
+  }
+
+  function squarify(nodes, x, y, w, h, out, colorOffset) {
+    const items = nodes
+      .filter((n) => n && n.size > 0)
+      .map((n, i) => ({
+        node: n,
+        size: n.size,
+        color: DM_PALETTE[(colorOffset + i) % DM_PALETTE.length],
+      }))
+      .sort((a, b) => b.size - a.size);
+    if (!items.length || w < 1 || h < 1) return;
+
+    const totalSize = items.reduce((a, b) => a + b.size, 0) || 1;
+    const scale = (w * h) / totalSize;
+    const queue = items.map((it) => ({ ...it, area: it.size * scale }));
+
+    let cx = x, cy = y, cw = w, ch = h;
+    let i = 0;
+
+    while (i < queue.length && cw > 0.5 && ch > 0.5) {
+      const horizontal = cw >= ch;
+      const side = horizontal ? ch : cw;
+      const row = [];
+      const rowAreas = [];
+
+      while (i < queue.length) {
+        const next = queue[i];
+        const trialAreas = rowAreas.concat([next.area]);
+        if (row.length && worst(trialAreas, side) > worst(rowAreas, side)) break;
+        row.push(next);
+        rowAreas.push(next.area);
+        i++;
+      }
+
+      const rowArea = rowAreas.reduce((a, b) => a + b, 0);
+      if (horizontal) {
+        const rowH = Math.min(ch, rowArea / cw);
+        layoutRow(row, cx, cy, cw, rowH, true, out);
+        cy += rowH;
+        ch -= rowH;
+      } else {
+        const rowW = Math.min(cw, rowArea / ch);
+        layoutRow(row, cx, cy, rowW, ch, false, out);
+        cx += rowW;
+        cw -= rowW;
+      }
+    }
+  }
+
+  function buildLayout(force) {
+    const node = currentNode();
+    const canvas = el.canvas;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const cssW = Math.max(100, Math.floor(rect.width));
+    const cssH = Math.max(100, Math.floor(rect.height));
+    const key = (node && node.path ? node.path : "") + "|" + cssW + "x" + cssH + "|" + state.stack.length;
+    if (!force && key === state.layoutKey && state.layout.length) {
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      canvas.style.width = cssW + "px";
+      canvas.style.height = cssH + "px";
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, cssW, cssH, empty: false };
+    }
+
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
+    canvas.style.width = cssW + "px";
+    canvas.style.height = cssH + "px";
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    state.layout = [];
+    state.layoutKey = key;
+    if (!node) return { ctx, cssW, cssH, empty: true };
+
+    const kids = (node.children || []).filter((c) => c.size > 0);
+    if (!kids.length) {
+      return { ctx, cssW, cssH, empty: true, emptyNode: node };
+    }
+    squarify(kids, 2, 2, cssW - 4, cssH - 4, state.layout, state.stack.length);
+    return { ctx, cssW, cssH, empty: false };
+  }
+
+  function paint(ctx, cssW, cssH, empty, emptyNode) {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.fillStyle = "#0e0e10";
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    if (empty) {
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = "500 14px Outfit, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      const msg =
+        emptyNode && emptyNode.size > 0
+          ? "Aucun sous-élément affichable à ce niveau"
+          : "Dossier vide ou inaccessible";
+      ctx.fillText(msg, cssW / 2, cssH / 2);
+      ctx.textAlign = "left";
+      return;
+    }
+
+    for (const cell of state.layout) {
+      const { x, y, w, h, color, node } = cell;
+      if (w < 0.5 || h < 0.5) continue;
+      const isHover = state.hover === node;
+      const isSel = state.selected === node;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = isHover || isSel ? 1 : 0.88;
+      ctx.fillRect(x, y, w, h);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = isSel ? "#fff" : "rgba(0,0,0,0.55)";
+      ctx.lineWidth = isSel ? 2 : 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, Math.max(0, w - 1), Math.max(0, h - 1));
+
+      if (w > 48 && h > 28) {
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(x, y, w, 22);
+        ctx.fillStyle = "#fff";
+        ctx.font = "600 12px Outfit, system-ui, sans-serif";
+        const label = node.name || "";
+        const size = fmtBytes(node.size);
+        const maxW = w - 10;
+        let text = label;
+        if (ctx.measureText(text).width > maxW) {
+          while (text.length > 1 && ctx.measureText(text + "…").width > maxW) {
+            text = text.slice(0, -1);
+          }
+          text += "…";
+        }
+        ctx.fillText(text, x + 5, y + 15);
+        if (h > 44) {
+          ctx.fillStyle = "rgba(255,255,255,0.75)";
+          ctx.font = "500 11px Outfit, system-ui, sans-serif";
+          ctx.fillText(size, x + 5, y + 34);
+        }
+      }
+    }
+  }
+
+  function draw(forceLayout) {
+    const built = buildLayout(!!forceLayout);
+    paint(built.ctx, built.cssW, built.cssH, built.empty, built.emptyNode);
+  }
+
+  function schedulePaint() {
+    if (state.paintScheduled) return;
+    state.paintScheduled = true;
+    requestAnimationFrame(() => {
+      state.paintScheduled = false;
+      draw(false);
+    });
+  }
+
+  function isOthersBucket(name) {
+    const n = String(name || "");
+    return n.startsWith("Autres") || n.startsWith("Others");
+  }
+
+  function canDrill(node) {
+    return !!(
+      node &&
+      node.isDir &&
+      node.children &&
+      node.children.length &&
+      !isOthersBucket(node.name)
+    );
+  }
+
+  function selectNode(node) {
+    state.selected = node || null;
+    renderTop();
+    schedulePaint();
+    const openTarget = state.selected || currentNode();
+    el.btnOpen.disabled =
+      !openTarget || !openTarget.path || isOthersBucket(openTarget.name);
+  }
+
+  function drillInto(node) {
+    if (!canDrill(node)) {
+      selectNode(node);
+      return;
+    }
+    state.stack.push(node);
+    state.selected = null;
+    state.layoutKey = "";
+    refreshView();
+  }
+
+  function goUp() {
+    if (state.stack.length > 1) {
+      state.stack.pop();
+      state.selected = null;
+      state.layoutKey = "";
+      refreshView();
+    }
+  }
+
+  function hitTest(mx, my) {
+    for (let i = state.layout.length - 1; i >= 0; i--) {
+      const c = state.layout[i];
+      if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) return c;
+    }
+    return null;
+  }
+
+  function renderCrumbs() {
+    el.crumbs.innerHTML = "";
+    state.stack.forEach((node, idx) => {
+      if (idx > 0) {
+        const sep = document.createElement("span");
+        sep.className = "crumb-sep";
+        sep.textContent = "/";
+        el.crumbs.appendChild(sep);
+      }
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "crumb" + (idx === state.stack.length - 1 ? " current" : "");
+      btn.textContent = node.name || "racine";
+      if (idx < state.stack.length - 1) {
+        btn.addEventListener("click", () => {
+          state.stack = state.stack.slice(0, idx + 1);
+          state.selected = null;
+          refreshView();
+        });
+      }
+      el.crumbs.appendChild(btn);
+    });
+  }
+
+  function renderTop() {
+    const node = currentNode();
+    el.topList.innerHTML = "";
+    if (!node) {
+      el.sideSub.textContent = "Aucun niveau";
+      el.btnOpen.disabled = true;
+      return;
+    }
+    el.sideSub.textContent = node.path || node.name;
+    const kids =
+      node.children && node.children.length
+        ? [...node.children].sort((a, b) => b.size - a.size).slice(0, DM_TOP_N)
+        : [node];
+    const max = kids[0] ? kids[0].size : 1;
+    kids.forEach((k) => {
+      const li = document.createElement("li");
+      if (state.selected === k) li.classList.add("active");
+      li.innerHTML =
+        `<span class="name" title="${esc(k.path || k.name)}"></span>` +
+        `<span class="size"></span>` +
+        `<span class="bar"><i style="width:${Math.max(4, (k.size / max) * 100)}%"></i></span>`;
+      li.querySelector(".name").textContent = k.name;
+      li.querySelector(".size").textContent = fmtBytes(k.size);
+      li.addEventListener("click", () => selectNode(k));
+      li.addEventListener("dblclick", () => drillInto(k));
+      el.topList.appendChild(li);
+    });
+    const openTarget = state.selected || node;
+    el.btnOpen.disabled = !openTarget || !openTarget.path || isOthersBucket(openTarget.name);
+  }
+
+  function refreshView() {
+    el.mapHint.classList.toggle("hidden", !!state.root);
+    renderCrumbs();
+    renderTop();
+    state.layoutKey = "";
+    draw(true);
+  }
+
+  function setScanning(on) {
+    state.scanning = on;
+    el.btnAnalyze.disabled = on;
+    el.btnCancel.disabled = !on;
+    el.btnPick.disabled = on;
+    el.driveSelect.disabled = on;
+  }
+
+  async function loadDrives() {
+    try {
+      const res = unwrapData(await api.list_drives());
+      const drives = res?.drives || [];
+      el.driveSelect.innerHTML = "";
+      drives.forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d.path;
+        opt.textContent = `${d.label || d.path}  ·  libre ${d.freeLabel || "—"} / ${d.totalLabel || "—"}`;
+        el.driveSelect.appendChild(opt);
+      });
+      if (!drives.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Aucun lecteur";
+        el.driveSelect.appendChild(opt);
+      }
+      state.scanPath = el.driveSelect.value || null;
+      setStatus("Choisissez un lecteur ou un dossier, puis lancez l'analyse.");
+    } catch (err) {
+      setStatus(String(err.message || err), "error");
+    }
+  }
+
+  async function loadResult() {
+    const result = unwrapData(await api.get_scan_result());
+    if (!result?.ok) {
+      setStatus(result?.error || "Pas de résultat", "error");
+      return;
+    }
+    const root = result.root;
+    if (!root) {
+      setStatus("Résultat sans arbre", "error");
+      return;
+    }
+    state.root = root;
+    state.scanPath = result.scanPath || state.scanPath;
+    state.stack = [root];
+    state.selected = null;
+    el.stFree.textContent = result.freeLabel || "—";
+    el.stUsed.textContent = result.usedLabel || "—";
+    el.stScanned.textContent = result.scannedLabel || "—";
+    setStatus(
+      `Analyse terminée · ${result.scannedLabel || "—"} · ${result.filesSeen || 0} éléments`,
+      "ok"
+    );
+    refreshView();
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
+  }
+
+  async function startAnalyze() {
+    const path = state.scanPath || el.driveSelect.value;
+    if (!path) return setStatus("Sélectionnez un lecteur ou un dossier.", "error");
+    state.scanPath = path;
+    state.cancelled = false;
+    state.root = null;
+    state.stack = [];
+    state.selected = null;
+    state.layout = [];
+    state.layoutKey = "";
+    el.stFree.textContent = "—";
+    el.stUsed.textContent = "—";
+    el.stScanned.textContent = "—";
+    el.mapHint.classList.remove("hidden");
+    el.mapHint.textContent = "Analyse en cours…";
+    el.topList.innerHTML = "";
+    el.crumbs.innerHTML = "";
+    el.sideSub.textContent = "Analyse en cours…";
+    el.btnOpen.disabled = true;
+    setScanning(true);
+    setStatus("Démarrage de l'analyse…");
+    try {
+      const start = unwrapData(await api.start_scan(path));
+      if (!start?.ok) {
+        setScanning(false);
+        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+        return setStatus(start?.error || "Échec démarrage", "error");
+      }
+      const prog = await pollDm(() => api.get_scan_progress(), setStatus, setProgress);
+      setScanning(false);
+      if (prog?.error === "Annulé" || prog?.error === "Cancelled" || state.cancelled) {
+        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+        setStatus("Analyse annulée.", "error");
+        if (setProgress) setTimeout(() => setProgress(0, ""), 400);
+        return;
+      }
+      if (prog?.error && !prog?.ok) {
+        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+        setStatus(prog.error, "error");
+        if (setProgress) setTimeout(() => setProgress(0, ""), 400);
+        return;
+      }
+      await loadResult();
+    } catch (err) {
+      setScanning(false);
+      el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+      setStatus(String(err.message || err), "error");
+    }
+  }
+
+  el.btnAnalyze.addEventListener("click", startAnalyze);
+  el.btnCancel.addEventListener("click", async () => {
+    if (!state.scanning) return;
+    state.cancelled = true;
+    el.btnCancel.disabled = true;
+    setStatus("Annulation demandée…");
+    try {
+      await api.cancel_scan();
+    } catch (_) {}
+  });
+  el.btnPick.addEventListener("click", async () => {
     setStatus("Ouverture du sélecteur de dossier…");
     try {
       const res = unwrapData(await api.pick_folder());
-      const path = res?.path || res?.data?.path || null;
-      if (path) {
-        document.getElementById("dmPath").value = path;
-        setStatus("Dossier sélectionné.", "ok");
-      } else if (res?.ok === false) {
-        setStatus(res.error || "Sélecteur indisponible — saisissez un chemin.", "error");
-      } else {
-        setStatus("Aucun dossier choisi.");
+      if (res?.ok === false) {
+        return setStatus(res.error || "Sélection annulée", "error");
       }
+      const path = res?.path || null;
+      if (!path) return setStatus("Aucun dossier choisi.");
+      state.scanPath = path;
+      let found = false;
+      for (const opt of el.driveSelect.options) {
+        if (opt.value === path) {
+          found = true;
+          el.driveSelect.value = path;
+          break;
+        }
+      }
+      if (!found) {
+        const opt = document.createElement("option");
+        opt.value = path;
+        opt.textContent = path;
+        el.driveSelect.appendChild(opt);
+        el.driveSelect.value = path;
+      }
+      setStatus("Dossier choisi : " + path, "ok");
     } catch (e) {
-      setStatus("Sélecteur indisponible : " + String(e.message || e) + " — saisissez un chemin.", "error");
+      setStatus("Sélecteur indisponible : " + String(e.message || e), "error");
     }
-  };
-
-  document.getElementById("dmCancel").onclick = () => api.cancel_scan().catch(() => {});
-
-  document.getElementById("dmScan").onclick = async () => {
-    const path = document.getElementById("dmPath").value.trim();
-    if (!path) return setStatus("Chemin requis (ou Choisir dossier).", "error");
-    setStatus("Scan en cours…");
-    const start = unwrapData(await api.start_scan(path));
-    if (!start?.ok) return setStatus(start?.error || "Échec démarrage", "error");
-    await pollDm(() => api.get_scan_progress(), setStatus, setProgress);
-    const result = unwrapData(await api.get_scan_result());
-    if (!result?.ok) return setStatus(result?.error || "Échec scan", "error");
-    const tree = result.tree || result.root || result.data || result.result || {};
-    const children = tree.children || tree.Children || result.children || [];
-    const rows = Array.isArray(children) ? children : [];
-    document.getElementById("dmBody").innerHTML = rows.length
-      ? rows
-          .slice(0, 500)
-          .map(
-            (n) =>
-              `<tr><td>${esc(n.name || n.Name)}</td><td class="wrap">${esc(n.path || n.Path || "")}</td><td>${esc(
-                fmtBytes(n.size || n.Size || 0)
-              )}</td><td><button type="button" class="action-btn" data-open="${esc(
-                n.path || n.Path || ""
-              )}">Ouvrir</button></td></tr>`
-          )
-          .join("")
-      : `<tr><td colspan="4" class="empty-state">Résultat vide — voir meta</td></tr>`;
-    document.getElementById("dmMeta").textContent = `Scan OK · ${rows.length} nœud(s) affiché(s)`;
-    setStatus("Scan terminé.", "ok");
-    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
-  };
-
-  document.getElementById("dmBody").addEventListener("click", (ev) => {
-    const b = ev.target.closest("[data-open]");
-    if (b) api.open_path(b.getAttribute("data-open"));
+  });
+  el.driveSelect.addEventListener("change", () => {
+    state.scanPath = el.driveSelect.value;
+  });
+  el.btnOpen.addEventListener("click", async () => {
+    const target = state.selected || currentNode();
+    if (!target || !target.path) return;
+    try {
+      const res = unwrapData(await api.open_path(target.path));
+      if (!res?.ok) setStatus(res?.error || "Ouverture impossible", "error");
+    } catch (err) {
+      setStatus(String(err.message || err), "error");
+    }
   });
 
-  document.getElementById("dmDrives").click();
+  el.canvas.addEventListener("mousemove", (ev) => {
+    const rect = el.canvas.getBoundingClientRect();
+    const hit = hitTest(ev.clientX - rect.left, ev.clientY - rect.top);
+    const node = hit ? hit.node : null;
+    if (node !== state.hover) {
+      state.hover = node;
+      schedulePaint();
+      el.canvas.title = node ? `${node.name} — ${fmtBytes(node.size)}` : "";
+    }
+  });
+  el.canvas.addEventListener("mouseleave", () => {
+    state.hover = null;
+    schedulePaint();
+  });
+  el.canvas.addEventListener("click", (ev) => {
+    const rect = el.canvas.getBoundingClientRect();
+    const hit = hitTest(ev.clientX - rect.left, ev.clientY - rect.top);
+    if (!hit) return;
+    selectNode(hit.node);
+  });
+  el.canvas.addEventListener("dblclick", (ev) => {
+    const rect = el.canvas.getBoundingClientRect();
+    const hit = hitTest(ev.clientX - rect.left, ev.clientY - rect.top);
+    if (!hit) return;
+    drillInto(hit.node);
+  });
+  el.canvas.addEventListener("contextmenu", (ev) => {
+    ev.preventDefault();
+    goUp();
+  });
+
+  const onResize = () => {
+    if (state.root) {
+      state.layoutKey = "";
+      draw(true);
+    }
+  };
+  window.addEventListener("resize", onResize);
+  roCleanups.push(() => window.removeEventListener("resize", onResize));
+
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(() => onResize());
+    ro.observe(el.canvas.parentElement);
+    roCleanups.push(() => ro.disconnect());
+  }
+
+  body._dmCleanup = () => {
+    roCleanups.forEach((fn) => {
+      try {
+        fn();
+      } catch (_) {}
+    });
+  };
+
+  await loadDrives();
+  requestAnimationFrame(() => draw(true));
 }
 
 async function mountDmSearch(body, api, setStatus, setProgress) {

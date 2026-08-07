@@ -363,3 +363,223 @@
   background: var(--accent);
   transition: width 0.2s ease;
 }
+
+/* DiskMap Map segment — squarified treemap (ported from DiskMap SoT) */
+.hub-inhub .dm-map-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  overflow: hidden;
+}
+
+.hub-inhub .dm-map-shell > .panel.dm-toolbar {
+  flex-shrink: 0;
+}
+
+.hub-inhub .dm-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.hub-inhub .dm-stats .stat {
+  min-width: 88px;
+}
+
+.hub-inhub .dm-stats .label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hub-inhub .dm-stats .value {
+  font-size: 0.95rem;
+  font-weight: 650;
+  margin-top: 2px;
+}
+
+.hub-inhub .dm-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 8px;
+  min-height: 1.4em;
+}
+
+.hub-inhub .dm-crumbs .crumb {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 550;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.hub-inhub .dm-crumbs .crumb:hover:not(.current) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.hub-inhub .dm-crumbs .crumb.current {
+  color: var(--muted);
+  cursor: default;
+}
+
+.hub-inhub .dm-crumbs .crumb-sep {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.hub-inhub .dm-nav-hint {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.hub-inhub .dm-workspace {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 12px;
+  flex: 1;
+  min-height: 220px;
+  overflow: hidden;
+}
+
+.hub-inhub .dm-map-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 10, 12, 0.85);
+  overflow: hidden;
+}
+
+.hub-inhub #treemap {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.hub-inhub .dm-map-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+  pointer-events: none;
+  padding: 24px;
+  text-align: center;
+}
+
+.hub-inhub .dm-map-hint.hidden {
+  display: none;
+}
+
+.hub-inhub .dm-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg2) 88%, transparent);
+  overflow: hidden;
+}
+
+.hub-inhub .dm-side h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.hub-inhub .dm-side-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-inhub .dm-top-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-inhub .dm-top-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.hub-inhub .dm-top-list li:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.hub-inhub .dm-top-list li.active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.hub-inhub .dm-top-list .name {
+  font-size: 0.85rem;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-inhub .dm-top-list .size {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.hub-inhub .dm-top-list .bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.hub-inhub .dm-top-list .bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.hub-inhub .dm-side .btn.full {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .hub-inhub .dm-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(200px, 1fr) minmax(160px, 40%);
+  }
+}
