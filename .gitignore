@@ -7,3 +7,5 @@ dist/
 *.exe
 .DS_Store
 Thumbs.db
+backend/tools/winclean_runtime/logs/*
+!backend/tools/winclean_runtime/logs/.gitkeep

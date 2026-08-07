@@ -1,6 +1,6 @@
 # Hub-Systeme — L'Atelier PC Command
 
-Hub catégorie **Système** — **Vague H4 Couche B** (fusion in-process).
+Hub catégorie **Système** — Couche B + H7 native + flatten `host.py` / `backend/`.
 
 ## Modules
 
@@ -20,19 +20,23 @@ Dashboard = KPIs lecture seule (disque / RAM / process). Fallback « Fenêtre d�
 Lancer.cmd
 ```
 
-Nécessite Python + `pywebview` + `psutil` (Admin hérité du launcher PC Command).
+Nécessite Python + `pywebview` + `psutil` (Admin hérité du launcher PC Command ; UAC aussi dans `main()`).
 
 ## Structure
 
 ```text
-host/host.py            # Api namespacée + ConfirmGate partagé
-host/api_modules.py     # Couche B — namespaces in-process
-host/modules/           # Logique métier (copies sources)
-host/security.py        # ConfirmGate (SecurityHelpers)
-host/window_chrome.py   # vendored HostHelpers
-host/suite_launch.py    # vendored HostHelpers
+host.py                 # entry + UAC + webview
+backend/
+  bridge.py             # Api + namespaces (systemclean, processhub, …)
+  security.py           # ConfirmGate (SecurityHelpers)
+  window_chrome.py      # vendored HostHelpers
+  suite_launch.py       # vendored HostHelpers
+  tools/                # logique métier (wincleaner, diskmap, processguard, …)
 ui/index.html           # shell + sidebar
-ui/app.js               # navigation + lazy modules
+ui/app.js               # navigation + lazy modules + titres Atelier
+ui/_hub_util.js         # helpers JS natifs (pas d’iframe)
 ui/dashboard.js         # home KPIs
-ui/modules/*.js         # UIs Couche B
+ui/modules/*.js         # UIs Couche B / H7
 ```
+
+Titres HWND : `L'Atelier PC Command — Système` / `[Module|Segment]`.

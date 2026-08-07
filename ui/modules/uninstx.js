@@ -2,7 +2,7 @@
  * UninstX — fusion native in-hub (pas d'iframe / pas de fausse fenêtre).
  * Bridge: pywebview.api.uninstx.*
  */
-import { apiNs, esc } from "./_hub_util.js";
+import { apiNs, esc } from "../_hub_util.js";
 
 function ensureCss() {
   const id = "hub-uninstx-css";
