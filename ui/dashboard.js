@@ -2,8 +2,8 @@
  * Hub-Systeme Accueil — Atelier live metrics + tuiles modules (zéro mutator).
  */
 
-const HUB_LABEL = "Système";
-const HUB_BLURB = "L'Atelier PC Command — métriques live lecture seule · aucun mutator";
+const HUB_LABEL = "System";
+const HUB_BLURB = "PC Command — live metrics (read-only) · no mutators";
 const SHOW_VIEW =
   () => window.HubSysteme?.showView || window.HubShell?.showView;
 
@@ -70,6 +70,7 @@ function el(id) {
 
 function metricsMarkup() {
   return `
+  <div class="hub-dash-root">
     <header class="hub-page-header hub-dash-head">
       <div>
         <h1>${esc(HUB_LABEL)}</h1>
@@ -81,7 +82,8 @@ function metricsMarkup() {
       </div>
     </header>
 
-    <main class="pcd-grid" id="view-dashboard">
+    <div class="hub-dash-metrics">
+    <div class="pcd-grid" id="hubMetricsGrid">
       <section class="panel hero tint-red">
         <div class="hero-gauge-wrap">
           <svg class="hero-gauge" viewBox="0 0 220 140" aria-hidden="true">
@@ -205,13 +207,15 @@ function metricsMarkup() {
           <span id="osLine">Connexion metrics…</span>
         </div>
       </section>
-    </main>
+    </div>
+    </div>
 
-    <div class="hub-dash-modules">
+    <section class="hub-dash-modules" aria-label="Accès rapide">
       <h2 class="hub-section-title">Accès rapide</h2>
       <div class="hub-tile-grid" id="tileGrid"></div>
       <p class="hub-status" id="dashStatus"></p>
-    </div>
+    </section>
+  </div>
   `;
 }
 

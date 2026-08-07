@@ -1,7 +1,7 @@
 /**
  * Hub-Systeme shell — Dashboard boot + lazy modules + sidebar collapsible.
  */
-const HUB_NAME = "L'Atelier PC Command — Système";
+const HUB_NAME = "PC Command | System";
 
 const TITLES = {
   dashboard: HUB_NAME,
@@ -21,6 +21,18 @@ function apiRoot() {
   return window.pywebview && window.pywebview.api;
 }
 
+function syncChromeTitle(title) {
+  try {
+    document.body && document.body.setAttribute("data-tool-title", title);
+    document.body && document.body.setAttribute("data-tool-subtitle", "");
+    const el = document.getElementById("toolTitleText");
+    if (el) {
+      el.dataset.locked = "1";
+      el.textContent = title;
+    }
+  } catch (_) {}
+}
+
 async function waitApi(timeoutMs = 8000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -33,6 +45,7 @@ async function waitApi(timeoutMs = 8000) {
 
 async function applyTitle(title) {
   document.title = title;
+  syncChromeTitle(title);
   const a = apiRoot();
   try {
     if (a && typeof a.set_window_title === "function") {

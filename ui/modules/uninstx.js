@@ -31,7 +31,7 @@ export async function mount(root) {
     <div class="hub-uninstx">
       <header class="hub-page-header">
         <h1>UninstX</h1>
-        <p>Programmes installés — désinstallation avec confirmation · L'Atelier PC Command</p>
+        <p>Programmes installés — désinstallation avec confirmation · PC Command</p>
       </header>
 
       <div class="ux-content">

@@ -87,7 +87,7 @@ function fmtBytes(n) {
 export async function mount(root) {
   const ctx = mountModuleShell(root, {
     title: "SystemClean",
-    subtitle: "WinCleaner · DiskMap — nettoyage, disque & santé · L'Atelier PC Command",
+    subtitle: "WinCleaner · DiskMap — nettoyage, disque & santé · PC Command",
     segments: [
       { id: "wc-health", label: "Santé" },
       { id: "wc-clean", label: "Nettoyage" },

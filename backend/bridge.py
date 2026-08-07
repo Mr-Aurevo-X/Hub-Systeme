@@ -1250,7 +1250,7 @@ class SystemCleanApi(_GateMixin):
         return self.open_app(name or "WinCleaner")
 
 
-HUB_TITLE = "L'Atelier PC Command — Système"
+HUB_TITLE = "PC Command | System"
 
 
 class DashboardApi:
