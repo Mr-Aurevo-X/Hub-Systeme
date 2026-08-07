@@ -35,6 +35,42 @@ function filterList(list, query, ...fields) {
   );
 }
 
+const SVC_STATUS = { 1: "Stopped", 2: "StartPending", 3: "StopPending", 4: "Running" };
+const SVC_START = { 0: "Boot", 1: "System", 2: "Automatic", 3: "Manual", 4: "Disabled" };
+const TASK_STATE = { 0: "Unknown", 1: "Disabled", 2: "Queued", 3: "Ready", 4: "Running" };
+
+function normService(s) {
+  const statusRaw = s.Status ?? s.status ?? s.state;
+  const startRaw = s.StartType ?? s.start_type ?? s.startType;
+  return {
+    ...s,
+    name: s.Name || s.name || s.service_name || "",
+    display_name: s.DisplayName || s.display_name || s.displayName || s.Name || s.name || "",
+    status:
+      typeof statusRaw === "number"
+        ? SVC_STATUS[statusRaw] || String(statusRaw)
+        : String(statusRaw || "—"),
+    start_type:
+      typeof startRaw === "number" ? SVC_START[startRaw] || String(startRaw) : String(startRaw || "—"),
+  };
+}
+
+function normTask(t) {
+  const stateRaw = t.State ?? t.state ?? t.status;
+  return {
+    ...t,
+    name: t.TaskName || t.task_name || t.name || "",
+    task_name: t.TaskName || t.task_name || t.name || "",
+    path: t.TaskPath || t.task_path || t.path || "",
+    task_path: t.TaskPath || t.task_path || t.path || "",
+    status:
+      typeof stateRaw === "number" ? TASK_STATE[stateRaw] || String(stateRaw) : String(stateRaw || "—"),
+    state:
+      typeof stateRaw === "number" ? TASK_STATE[stateRaw] || String(stateRaw) : String(stateRaw || "—"),
+    enabled: t.Enabled != null ? !!t.Enabled : t.enabled !== false,
+  };
+}
+
 function mkEmpty(msg = "Aucun élément.") {
   return `<div class="empty-state">${esc(msg)}</div>`;
 }
@@ -373,11 +409,12 @@ export async function mount(root) {
         const res = await api.list_services();
         if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
         // defensive: handle {services:[…]} or {items:[…]}
-        allServices = Array.isArray(res.services)
+        const raw = Array.isArray(res.services)
           ? res.services
           : Array.isArray(res.items)
           ? res.items
           : [];
+        allServices = raw.map(normService);
         renderServices();
         setStatus("");
       } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }
@@ -551,10 +588,10 @@ export async function mount(root) {
 
       const frag = document.createDocumentFragment();
       for (const task of list) {
-        const name     = task.task_name || task.name || "—";
-        const path     = task.task_path || task.path || "";
-        const status   = task.status   || task.state   || "—";
-        const enabled  = task.enabled !== false && !/disabled/i.test(status);
+        const name     = task.task_name || task.name || task.TaskName || "—";
+        const path     = task.task_path || task.path || task.TaskPath || "";
+        const status   = task.status || task.state || "—";
+        const enabled  = task.enabled !== false && !/disabled/i.test(String(status));
         const tr = document.createElement("tr");
         tr.innerHTML =
           `<td title="${esc(name)}">${esc(name)}</td>` +
@@ -605,13 +642,14 @@ export async function mount(root) {
         const res = await api.list_tasks();
         if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
         // defensive: handle {tasks:[…]}, {items:[…]}, or array directly
-        allTasks = Array.isArray(res.tasks)
+        const raw = Array.isArray(res.tasks)
           ? res.tasks
           : Array.isArray(res.items)
           ? res.items
           : Array.isArray(res)
           ? res
           : [];
+        allTasks = raw.map(normTask);
         renderTasks();
         setStatus("");
       } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }

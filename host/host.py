@@ -29,7 +29,7 @@ from suite_launch import (  # noqa: E402
 )
 from window_chrome import WindowChromeMixin, create_tool_window  # noqa: E402
 
-HUB_TITLE = "L'Atelier PC Command — Système"
+HUB_TITLE = "PC Command | System"
 DEFAULT_WIDTH = 1120
 DEFAULT_HEIGHT = 740
 
@@ -54,6 +54,23 @@ def ui_dir() -> Path:
 def is_admin() -> bool:
     try:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def _relaunch_as_admin() -> bool:
+    """Relaunch elevated via UAC. True if elevated process started."""
+    try:
+        frozen = bool(getattr(sys, "frozen", False))
+        executable = sys.executable
+        if frozen:
+            params = " ".join(f'"{a}"' for a in sys.argv[1:])
+        else:
+            script = str(Path(sys.argv[0]).resolve())
+            rest = " ".join(f'"{a}"' for a in sys.argv[1:])
+            params = f'"{script}"' + (f" {rest}" if rest else "")
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", executable, params, None, 1)
+        return int(rc) > 32
     except Exception:
         return False
 
@@ -153,6 +170,19 @@ class Api(WindowChromeMixin):
 
     def set_window(self, window: Any) -> None:
         WindowChromeMixin.set_window(self, window)
+        # Nested hosts that need folder dialogs / HWND (DiskMap, WinCleaner).
+        try:
+            dm = getattr(self.systemclean, "diskmap", None)
+            if dm is not None and hasattr(dm, "set_window"):
+                dm.set_window(window)
+        except Exception:
+            pass
+        try:
+            wc = getattr(self.systemclean, "wincleaner", None)
+            if wc is not None and hasattr(wc, "set_window"):
+                wc.set_window(window)
+        except Exception:
+            pass
 
     def module_catalog(self) -> list[dict]:
         return [
@@ -218,10 +248,13 @@ class Api(WindowChromeMixin):
 
 
 def main() -> None:
+    if not is_admin():
+        if _relaunch_as_admin():
+            raise SystemExit(0)
+        raise SystemExit("PC Command | System nécessite les droits administrateur.")
     index = ui_dir() / "index.html"
     if not index.is_file():
         raise SystemExit(f"UI introuvable: {index}")
-    _ = is_admin()
     api = Api()
     create_tool_window(
         title=HUB_TITLE,

@@ -2,7 +2,7 @@
  * SystemClean — native in-hub (WinCleaner + DiskMap), no iframe.
  * Bridge: pywebview.api.systemclean.wincleaner.* / systemclean.diskmap.*
  */
-import { mountModuleShell, waitNs, esc, pollUntil } from "./_in_hub.js";
+import { mountModuleShell, waitNs, esc, pollUntil, unwrapData } from "./_in_hub.js";
 
 const TRACE_CATS = [
   { id: "Recent", label: "Fichiers récents" },
@@ -30,7 +30,23 @@ async function runSync(api, action, payload = {}) {
   return res.data != null ? res : res;
 }
 
-async function runJob(api, action, payload, askConfirm, confirmMsg) {
+function summarizeClean(data) {
+  if (!data || typeof data !== "object") return "";
+  const d = data.data || data;
+  const freed = d.FreedText || d.freedText || (d.FreedBytes != null ? fmtBytes(d.FreedBytes) : "");
+  const before = d.BeforeText || d.beforeText || d.EstimatedText || d.estimatedText || "";
+  const delta = d.diskDelta || d.DiskDelta || d.delta || null;
+  const parts = [];
+  if (before) parts.push("Avant / estimé : " + before);
+  if (freed) parts.push("Libéré : " + freed);
+  if (delta) {
+    const t = typeof delta === "object" ? delta.Text || delta.text || JSON.stringify(delta) : String(delta);
+    parts.push("Disque : " + t);
+  }
+  return parts.join("\n");
+}
+
+async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress) {
   if (confirmMsg) {
     const ok = await askConfirm(confirmMsg, "Confirmer l'action");
     if (!ok) return { ok: false, error: "Annulé" };
@@ -43,19 +59,16 @@ async function runJob(api, action, payload, askConfirm, confirmMsg) {
   if (!started || !started.ok) {
     return { ok: false, error: (started && started.error) || "Démarrage refusé" };
   }
-  const progress = await pollUntil(async () => {
-    const p = await api.get_action_progress();
-    const d = (p && p.data) || p || {};
-    return {
-      ok: true,
-      running: !!d.running,
-      done: !!d.done && !d.running,
-      error: d.error || null,
-      percent: d.percent,
-      phase: d.phase,
-      detail: d.detail,
-    };
-  }, { intervalMs: 450, timeoutMs: action === "sfcScan" || action === "dismRestoreHealth" ? 1800000 : 300000 });
+  const progress = await pollUntil(
+    () => api.get_action_progress(),
+    {
+      intervalMs: 450,
+      timeoutMs: action === "sfcScan" || action === "dismRestoreHealth" ? 1800000 : 300000,
+      onTick: ({ percent, phase, detail }) => {
+        if (setProgress) setProgress(percent || 0, `${percent || 0}% · ${phase || ""}${detail ? " — " + detail : ""}`);
+      },
+    }
+  );
   if (progress.error && progress.done) {
     return { ok: false, error: progress.error };
   }
@@ -74,7 +87,7 @@ function fmtBytes(n) {
 export async function mount(root) {
   const ctx = mountModuleShell(root, {
     title: "SystemClean",
-    subtitle: "WinCleaner · DiskMap — nettoyage, disque & santé · L'Atelier PC Command",
+    subtitle: "WinCleaner · DiskMap — nettoyage, disque & santé · PC Command | System",
     segments: [
       { id: "wc-health", label: "Santé" },
       { id: "wc-clean", label: "Nettoyage" },
@@ -100,7 +113,7 @@ export async function mount(root) {
 }
 
 async function renderSegment(id, body, ctx) {
-  const { setStatus, askConfirm } = ctx;
+  const { setStatus, askConfirm, setProgress } = ctx;
   body.innerHTML = `<div class="empty-state">Chargement…</div>`;
 
   try {
@@ -112,11 +125,11 @@ async function renderSegment(id, body, ctx) {
         return;
       }
       if (id === "wc-health") return mountHealth(body, api, setStatus);
-      if (id === "wc-clean") return mountClean(body, api, setStatus, askConfirm);
-      if (id === "wc-traces") return mountTraces(body, api, setStatus, askConfirm);
-      if (id === "wc-debloat") return mountDebloat(body, api, setStatus, askConfirm);
-      if (id === "wc-uninstall") return mountUninstall(body, api, setStatus, askConfirm);
-      if (id === "wc-opt") return mountOpt(body, api, setStatus, askConfirm);
+      if (id === "wc-clean") return mountClean(body, api, setStatus, askConfirm, setProgress);
+      if (id === "wc-traces") return mountTraces(body, api, setStatus, askConfirm, setProgress);
+      if (id === "wc-debloat") return mountDebloat(body, api, setStatus, askConfirm, setProgress);
+      if (id === "wc-uninstall") return mountUninstall(body, api, setStatus, askConfirm, setProgress);
+      if (id === "wc-opt") return mountOpt(body, api, setStatus, askConfirm, setProgress);
       if (id === "wc-sessions") return mountSessions(body, api, setStatus);
       if (id === "wc-excl") return mountExclusions(body, api, setStatus, askConfirm);
       if (id === "wc-tools") return mountTools(body, api, setStatus, askConfirm);
@@ -128,11 +141,11 @@ async function renderSegment(id, body, ctx) {
       body.innerHTML = `<div class="empty-state">Bridge Python indisponible.</div>`;
       return;
     }
-    if (id === "dm-map") return mountDiskMap(body, api, setStatus);
-    if (id === "dm-search") return mountDmSearch(body, api, setStatus);
-    if (id === "dm-large") return mountDmLarge(body, api, setStatus, askConfirm);
-    if (id === "dm-empty") return mountDmEmpty(body, api, setStatus, askConfirm);
-    if (id === "dm-dupes") return mountDmDupes(body, api, setStatus, askConfirm);
+    if (id === "dm-map") return mountDiskMap(body, api, setStatus, setProgress);
+    if (id === "dm-search") return mountDmSearch(body, api, setStatus, setProgress);
+    if (id === "dm-large") return mountDmLarge(body, api, setStatus, askConfirm, setProgress);
+    if (id === "dm-empty") return mountDmEmpty(body, api, setStatus, askConfirm, setProgress);
+    if (id === "dm-dupes") return mountDmDupes(body, api, setStatus, askConfirm, setProgress);
     if (id === "dm-health") return mountDmHealth(body, api, setStatus);
     if (id === "dm-diff") return mountDmDiff(body, api, setStatus);
   } catch (e) {
@@ -240,7 +253,7 @@ async function mountHealth(body, api, setStatus) {
   await loadTemp();
 }
 
-async function mountClean(body, api, setStatus, askConfirm) {
+async function mountClean(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -298,13 +311,35 @@ async function mountClean(body, api, setStatus, askConfirm) {
     if (!ids.length) return setStatus("Sélectionnez au moins une catégorie.", "error");
     setStatus("Analyse en cours…");
     document.getElementById("clProg").style.width = "15%";
+    if (setProgress) setProgress(15, "Analyse…");
     try {
       const res = await runSync(api, "scanClean", { ids });
-      document.getElementById("clOut").textContent = JSON.stringify(res.data || res, null, 2).slice(0, 6000);
+      const data = res.data || res;
+      const summary = summarizeClean(data);
+      const cats = data.categories || data.Categories || data.items || [];
+      let human = summary || "";
+      if (Array.isArray(cats) && cats.length) {
+        human +=
+          (human ? "\n\n" : "") +
+          cats
+            .slice(0, 40)
+            .map(
+              (c) =>
+                `• ${c.label || c.Label || c.name || c.Id || c.id || "?"} — ${
+                  c.sizeText || c.SizeText || c.BytesText || fmtBytes(c.bytes || c.Bytes || 0)
+                }`
+            )
+            .join("\n");
+      }
+      document.getElementById("clOut").textContent =
+        human || JSON.stringify(data, null, 2).slice(0, 6000);
       document.getElementById("clProg").style.width = "100%";
+      if (setProgress) setProgress(100, "Analyse terminée");
       setStatus("Analyse terminée.", "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
+    } finally {
+      if (setProgress) setTimeout(() => setProgress(0, ""), 800);
     }
   };
   document.getElementById("clRun").onclick = async () => {
@@ -312,17 +347,31 @@ async function mountClean(body, api, setStatus, askConfirm) {
     if (!ids.length) return setStatus("Sélectionnez au moins une catégorie.", "error");
     setStatus("Nettoyage…");
     document.getElementById("clProg").style.width = "10%";
-    const res = await runJob(api, "runClean", { ids }, askConfirm, `Nettoyer ${ids.length} catégorie(s) ?`);
+    const res = await runJob(
+      api,
+      "runClean",
+      { ids },
+      askConfirm,
+      `Nettoyer ${ids.length} catégorie(s) ?`,
+      (pct, label) => {
+        document.getElementById("clProg").style.width = (pct || 0) + "%";
+        if (setProgress) setProgress(pct, label);
+      }
+    );
     document.getElementById("clProg").style.width = "100%";
     if (!res?.ok) return setStatus(res?.error || "Échec", "error");
-    document.getElementById("clOut").textContent = JSON.stringify(res.data || res, null, 2).slice(0, 6000);
-    setStatus("Nettoyage terminé.", "ok");
+    const data = res.data || res;
+    const summary = summarizeClean(data);
+    document.getElementById("clOut").textContent =
+      (summary ? summary + "\n\n" : "") + JSON.stringify(data, null, 2).slice(0, 4000);
+    setStatus(summary ? summary.split("\n")[0] : "Nettoyage terminé.", "ok");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 800);
   };
 
   await loadCats();
 }
 
-async function mountTraces(body, api, setStatus, askConfirm) {
+async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -376,13 +425,15 @@ async function mountTraces(body, api, setStatus, askConfirm) {
       "runClean",
       { ids, TracesOnly: true },
       askConfirm,
-      `Effacer les traces sélectionnées (${ids.length}) ?`
+      `Effacer les traces sélectionnées (${ids.length}) ?`,
+      setProgress
     );
     setStatus(res?.ok ? "Traces effacées." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 }
 
-async function mountDebloat(body, api, setStatus, askConfirm) {
+async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -398,45 +449,53 @@ async function mountDebloat(body, api, setStatus, askConfirm) {
 
   document.getElementById("dbScan").onclick = async () => {
     setStatus("Scan bloat…");
+    if (setProgress) setProgress(20, "Scan bloat…");
     try {
       const res = await runSync(api, "getBloatApps", {});
-      const data = res.data || res;
-      const apps = data.apps || data.Apps || [];
+      const data = res.data != null ? res.data : res;
+      let apps = data.apps || data.Apps || data.items || data.Items || [];
+      if (!Array.isArray(apps) && typeof apps === "object") apps = Object.values(apps);
+      if (!Array.isArray(apps)) apps = [];
       document.getElementById("dbList").innerHTML = apps.length
         ? apps
-            .map(
-              (a) =>
-                `<label><input type="checkbox" value="${esc(a.Name || a.name)}" ${
-                  a.Selected !== false ? "checked" : ""
-                } /> <span><strong>${esc(a.Name || a.name)}</strong> <span class="meta">${esc(
-                  a.ApproxSizeText || a.sizeText || ""
-                )}</span></span></label>`
-            )
+            .map((a) => {
+              const name = a.Name || a.name || a.PackageName || a.packageName || a.Id || a.id || "";
+              const size = a.ApproxSizeText || a.sizeText || a.SizeText || "";
+              if (!name) return "";
+              return `<label><input type="checkbox" value="${esc(name)}" ${
+                a.Selected !== false ? "checked" : ""
+              } /> <span><strong>${esc(name)}</strong> <span class="meta">${esc(size)}</span></span></label>`;
+            })
+            .filter(Boolean)
             .join("")
-        : `<p class="empty-state">Aucune app bloat détectée</p>`;
+        : `<p class="empty-state">Aucune app bloat détectée (ou API sans liste)</p>`;
       document.getElementById("dbMeta").textContent = `${apps.length} app(s)`;
-      setStatus("Scan bloat OK.", "ok");
+      setStatus(apps.length ? "Scan bloat OK." : "Scan OK — liste vide.", apps.length ? "ok" : "");
     } catch (e) {
       setStatus(String(e.message || e), "error");
+    } finally {
+      if (setProgress) setProgress(0, "");
     }
   };
 
   document.getElementById("dbRemove").onclick = async () => {
-    const names = [...body.querySelectorAll("#dbList input:checked")].map((el) => el.value);
-    if (!names.length) return;
+    const names = [...body.querySelectorAll("#dbList input:checked")].map((el) => el.value).filter(Boolean);
+    if (!names.length) return setStatus("Aucune app sélectionnée.", "error");
     const res = await runJob(
       api,
       "removeBloat",
       { names },
       askConfirm,
-      `Retirer ${names.length} application(s) bloat ?`
+      `Retirer ${names.length} application(s) bloat ?`,
+      setProgress
     );
     setStatus(res?.ok ? "Debloat terminé." : res?.error || "Échec", res?.ok ? "ok" : "error");
     if (res?.ok) document.getElementById("dbScan").click();
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 }
 
-async function mountUninstall(body, api, setStatus, askConfirm) {
+async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -494,9 +553,11 @@ async function mountUninstall(body, api, setStatus, askConfirm) {
       "officialUninstall",
       { keyword },
       askConfirm,
-      `Lancer la désinstallation officielle pour « ${keyword} » ?`
+      `Lancer la désinstallation officielle pour « ${keyword} » ?`,
+      setProgress
     );
     setStatus(res?.ok ? "Désinstallation lancée." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
   document.getElementById("unPurge").onclick = async () => {
@@ -507,19 +568,25 @@ async function mountUninstall(body, api, setStatus, askConfirm) {
       "purgeLeftovers",
       { keyword },
       askConfirm,
-      `Purger les résidus pour « ${keyword} » ?`
+      `Purger les résidus pour « ${keyword} » ?`,
+      setProgress
     );
     setStatus(res?.ok ? "Purge terminée." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 }
 
-async function mountOpt(body, api, setStatus, askConfirm) {
+async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
+        <p class="meta" style="margin-bottom:10px">
+          Optimisations WinCleaner : profils d’affinage Windows, SFC (intégrité fichiers système),
+          DISM RestoreHealth (image Windows), analyse WinSxS (composants). Chaque action est confirmée.
+        </p>
         <div class="toolbar-row" style="flex-wrap:wrap">
-          <button type="button" class="btn accent" id="opRun">Optimisations</button>
-          <button type="button" class="btn" id="opSfc">SFC Scan</button>
+          <button type="button" class="btn accent" id="opRun">Optimisations Windows</button>
+          <button type="button" class="btn" id="opSfc">SFC /scannow</button>
           <button type="button" class="btn" id="opDism">DISM RestoreHealth</button>
           <button type="button" class="btn" id="opWinsxs">Analyser WinSxS</button>
         </div>
@@ -528,19 +595,34 @@ async function mountOpt(body, api, setStatus, askConfirm) {
       </div>
     </div>`;
 
-  async function job(action, msg) {
+  async function job(action, msg, detail) {
     setStatus(msg);
+    document.getElementById("opOut").textContent = detail + "\n\nDémarrage…";
     document.getElementById("opProg").style.width = "12%";
-    const res = await runJob(api, action, {}, askConfirm, msg + " Continuer ?");
+    const res = await runJob(api, action, {}, askConfirm, msg + " Continuer ?", (pct, label) => {
+      document.getElementById("opProg").style.width = (pct || 0) + "%";
+      if (setProgress) setProgress(pct, label);
+    });
     document.getElementById("opProg").style.width = "100%";
-    document.getElementById("opOut").textContent = JSON.stringify(res?.data || res, null, 2).slice(0, 8000);
+    const data = res?.data || res;
+    const human = summarizeClean(data);
+    document.getElementById("opOut").textContent =
+      detail +
+      "\n\n" +
+      (human ? human + "\n\n" : "") +
+      (res?.ok === false ? "Erreur : " + (res.error || "?") : JSON.stringify(data, null, 2).slice(0, 6000));
     setStatus(res?.ok ? "Terminé." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 800);
   }
 
-  document.getElementById("opRun").onclick = () => job("runOptimizations", "Lancer les optimisations ?");
-  document.getElementById("opSfc").onclick = () => job("sfcScan", "Lancer SFC /scannow ?");
-  document.getElementById("opDism").onclick = () => job("dismRestoreHealth", "Lancer DISM RestoreHealth ?");
-  document.getElementById("opWinsxs").onclick = () => job("analyzeWinSxS", "Analyser WinSxS ?");
+  document.getElementById("opRun").onclick = () =>
+    job("runOptimizations", "Lancer les optimisations Windows ?", "Action : runOptimizations — affinage / nettoyage ciblé Windows.");
+  document.getElementById("opSfc").onclick = () =>
+    job("sfcScan", "Lancer SFC /scannow ?", "Action : sfcScan — vérifie et répare les fichiers système protégés (peut prendre longtemps).");
+  document.getElementById("opDism").onclick = () =>
+    job("dismRestoreHealth", "Lancer DISM RestoreHealth ?", "Action : dismRestoreHealth — répare l’image Windows via DISM (long).");
+  document.getElementById("opWinsxs").onclick = () =>
+    job("analyzeWinSxS", "Analyser WinSxS ?", "Action : analyzeWinSxS — analyse le magasin de composants (lecture / rapport).");
 }
 
 async function mountSessions(body, api, setStatus) {
@@ -667,19 +749,36 @@ async function mountTools(body, api, setStatus, askConfirm) {
 
 /* ── DiskMap panels ──────────────────────────────────────────────────────── */
 
-async function pollDm(getter, setStatus) {
-  return pollUntil(async () => {
-    const p = await getter();
-    if (!p) return { ok: false, done: true, error: "No response" };
-    const d = p.data || p;
-    const running = d.running === true || (p.running === true);
-    const done = d.done === true || (p.ok && !running && (d.result != null || d.items != null || d.files != null || d.folders != null || d.groups != null || d.tree != null));
-    if (typeof d.percent === "number") setStatus(`Progression ${d.percent}%…`);
-    return { ok: p.ok !== false, running, done: done || (p.ok && d.error), error: d.error || p.error, raw: p };
-  }, { intervalMs: 400, timeoutMs: 600000 });
+async function pollDm(getter, setStatus, setProgress) {
+  return pollUntil(() => getter(), {
+    intervalMs: 450,
+    timeoutMs: 600000,
+    onTick: ({ percent, phase, detail, running, done }) => {
+      const label = `${percent || 0}%${phase ? " · " + phase : ""}${detail ? " — " + detail : ""}`;
+      if (setStatus && running) setStatus(label);
+      if (setProgress) setProgress(done ? 100 : Math.max(percent || 0, 1), label);
+    },
+  });
 }
 
-async function mountDiskMap(body, api, setStatus) {
+function dmFilesFromProgress(prog) {
+  const r = prog?.result || prog?.raw?.result || prog;
+  if (!r) return [];
+  if (Array.isArray(r)) return r;
+  if (Array.isArray(r.files)) return r.files;
+  if (Array.isArray(r.Folders)) return r.Folders;
+  if (Array.isArray(r.folders)) return r.folders;
+  if (Array.isArray(r.items)) return r.items;
+  if (Array.isArray(r.groups)) return r.groups;
+  if (r.data) {
+    if (Array.isArray(r.data.files)) return r.data.files;
+    if (Array.isArray(r.data.folders)) return r.data.folders;
+    if (Array.isArray(r.data.items)) return r.data.items;
+  }
+  return [];
+}
+
+async function mountDiskMap(body, api, setStatus, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -701,8 +800,8 @@ async function mountDiskMap(body, api, setStatus) {
     </div>`;
 
   document.getElementById("dmDrives").onclick = async () => {
-    const res = await api.list_drives();
-    const drives = res?.drives || res?.items || [];
+    const res = unwrapData(await api.list_drives());
+    const drives = res?.drives || res?.items || res?.data?.drives || [];
     document.getElementById("dmBody").innerHTML = (drives || [])
       .map(
         (d) =>
@@ -725,22 +824,35 @@ async function mountDiskMap(body, api, setStatus) {
   });
 
   document.getElementById("dmPick").onclick = async () => {
-    const res = await api.pick_folder();
-    if (res?.ok && res.path) document.getElementById("dmPath").value = res.path;
+    setStatus("Ouverture du sélecteur de dossier…");
+    try {
+      const res = unwrapData(await api.pick_folder());
+      const path = res?.path || res?.data?.path || null;
+      if (path) {
+        document.getElementById("dmPath").value = path;
+        setStatus("Dossier sélectionné.", "ok");
+      } else if (res?.ok === false) {
+        setStatus(res.error || "Sélecteur indisponible — saisissez un chemin.", "error");
+      } else {
+        setStatus("Aucun dossier choisi.");
+      }
+    } catch (e) {
+      setStatus("Sélecteur indisponible : " + String(e.message || e) + " — saisissez un chemin.", "error");
+    }
   };
 
   document.getElementById("dmCancel").onclick = () => api.cancel_scan().catch(() => {});
 
   document.getElementById("dmScan").onclick = async () => {
     const path = document.getElementById("dmPath").value.trim();
-    if (!path) return setStatus("Chemin requis.", "error");
+    if (!path) return setStatus("Chemin requis (ou Choisir dossier).", "error");
     setStatus("Scan en cours…");
-    const start = await api.start_scan(path);
+    const start = unwrapData(await api.start_scan(path));
     if (!start?.ok) return setStatus(start?.error || "Échec démarrage", "error");
-    await pollDm(() => api.get_scan_progress(), setStatus);
-    const result = await api.get_scan_result();
+    await pollDm(() => api.get_scan_progress(), setStatus, setProgress);
+    const result = unwrapData(await api.get_scan_result());
     if (!result?.ok) return setStatus(result?.error || "Échec scan", "error");
-    const tree = result.tree || result.root || result.data || {};
+    const tree = result.tree || result.root || result.data || result.result || {};
     const children = tree.children || tree.Children || result.children || [];
     const rows = Array.isArray(children) ? children : [];
     document.getElementById("dmBody").innerHTML = rows.length
@@ -758,6 +870,7 @@ async function mountDiskMap(body, api, setStatus) {
       : `<tr><td colspan="4" class="empty-state">Résultat vide — voir meta</td></tr>`;
     document.getElementById("dmMeta").textContent = `Scan OK · ${rows.length} nœud(s) affiché(s)`;
     setStatus("Scan terminé.", "ok");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
   document.getElementById("dmBody").addEventListener("click", (ev) => {
@@ -768,7 +881,7 @@ async function mountDiskMap(body, api, setStatus) {
   document.getElementById("dmDrives").click();
 }
 
-async function mountDmSearch(body, api, setStatus) {
+async function mountDmSearch(body, api, setStatus, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
@@ -788,11 +901,10 @@ async function mountDmSearch(body, api, setStatus) {
     const query = document.getElementById("srQ").value.trim();
     if (!query) return setStatus("Requête requise.", "error");
     setStatus("Recherche…");
-    const start = await api.start_search(root, query, {});
+    const start = unwrapData(await api.start_search(root, query, {}));
     if (!start?.ok) return setStatus(start?.error || "Échec", "error");
-    const prog = await pollDm(() => api.get_search_progress(), setStatus);
-    const raw = prog.raw || prog;
-    const items = raw.items || raw.data?.items || raw.files || [];
+    const prog = await pollDm(() => api.get_search_progress(), setStatus, setProgress);
+    const items = dmFilesFromProgress(prog);
     document.getElementById("srBody").innerHTML = (items || [])
       .slice(0, 400)
       .map(
@@ -802,6 +914,7 @@ async function mountDmSearch(body, api, setStatus) {
       )
       .join("") || `<tr><td colspan="3" class="empty-state">Aucun résultat</td></tr>`;
     setStatus(`${(items || []).length} résultat(s)`, "ok");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
   body.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-open]");
@@ -809,30 +922,38 @@ async function mountDmSearch(body, api, setStatus) {
   });
 }
 
-async function mountDmLarge(body, api, setStatus, askConfirm) {
+async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
           <div class="search-wrap"><input type="text" id="lgRoot" placeholder="Racine" value="C:\\" /></div>
+          <button type="button" class="btn" id="lgPick">Dossier…</button>
           <input type="number" id="lgMin" value="50" title="Min Mo" style="width:90px" />
           <button type="button" class="btn accent" id="lgGo">Scanner</button>
         </div>
+        <p class="meta">Scan long sur C:\\ — préférez un dossier ciblé. La barre de progression reste visible pendant le parcours.</p>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:220px">
         <div class="table-wrap"><table class="data"><thead><tr><th>Fichier</th><th>Taille</th><th></th></tr></thead><tbody id="lgBody"></tbody></table></div>
       </div>
     </div>`;
 
+  document.getElementById("lgPick").onclick = async () => {
+    const res = unwrapData(await api.pick_folder());
+    const path = res?.path || res?.data?.path;
+    if (path) document.getElementById("lgRoot").value = path;
+  };
+
   document.getElementById("lgGo").onclick = async () => {
     const root = document.getElementById("lgRoot").value.trim() || "C:\\";
     const minMb = Number(document.getElementById("lgMin").value) || 50;
     setStatus("Scan gros fichiers…");
-    const start = await api.start_scan_large(root, 80, minMb);
+    const start = unwrapData(await api.start_scan_large(root, 80, minMb));
     if (!start?.ok) return setStatus(start?.error || "Échec", "error");
-    const prog = await pollDm(() => api.get_large_progress(), setStatus);
-    const raw = prog.raw || {};
-    const files = raw.files || raw.data?.files || raw.items || [];
+    const prog = await pollDm(() => api.get_large_progress(), setStatus, setProgress);
+    if (prog.error) return setStatus(prog.error, "error");
+    const files = dmFilesFromProgress(prog);
     document.getElementById("lgBody").innerHTML = (files || [])
       .map(
         (f) =>
@@ -844,6 +965,7 @@ async function mountDmLarge(body, api, setStatus, askConfirm) {
       )
       .join("") || `<tr><td colspan="3" class="empty-state">Aucun fichier</td></tr>`;
     setStatus(`${(files || []).length} fichier(s)`, "ok");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
   body.addEventListener("click", async (ev) => {
@@ -858,12 +980,13 @@ async function mountDmLarge(body, api, setStatus, askConfirm) {
   });
 }
 
-async function mountDmEmpty(body, api, setStatus, askConfirm) {
+async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
           <div class="search-wrap"><input type="text" id="emRoot" value="C:\\" /></div>
+          <button type="button" class="btn" id="emPick">Dossier…</button>
           <button type="button" class="btn accent" id="emGo">Chercher dossiers vides</button>
         </div>
       </div>
@@ -872,14 +995,20 @@ async function mountDmEmpty(body, api, setStatus, askConfirm) {
       </div>
     </div>`;
 
+  document.getElementById("emPick").onclick = async () => {
+    const res = unwrapData(await api.pick_folder());
+    const path = res?.path || res?.data?.path;
+    if (path) document.getElementById("emRoot").value = path;
+  };
+
   document.getElementById("emGo").onclick = async () => {
     const root = document.getElementById("emRoot").value.trim() || "C:\\";
     setStatus("Recherche dossiers vides…");
-    const start = await api.start_find_empty(root);
+    const start = unwrapData(await api.start_find_empty(root));
     if (!start?.ok) return setStatus(start?.error || "Échec", "error");
-    const prog = await pollDm(() => api.get_empty_progress(), setStatus);
-    const raw = prog.raw || {};
-    const folders = raw.folders || raw.data?.folders || raw.items || [];
+    const prog = await pollDm(() => api.get_empty_progress(), setStatus, setProgress);
+    if (prog.error) return setStatus(prog.error, "error");
+    const folders = dmFilesFromProgress(prog);
     document.getElementById("emBody").innerHTML = (folders || [])
       .map(
         (f) => {
@@ -891,6 +1020,7 @@ async function mountDmEmpty(body, api, setStatus, askConfirm) {
       )
       .join("") || `<tr><td colspan="2" class="empty-state">Aucun dossier vide</td></tr>`;
     setStatus(`${(folders || []).length} dossier(s)`, "ok");
+    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
   body.addEventListener("click", async (ev) => {
@@ -905,12 +1035,13 @@ async function mountDmEmpty(body, api, setStatus, askConfirm) {
   });
 }
 
-async function mountDmDupes(body, api, setStatus, askConfirm) {
+async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
           <div class="search-wrap"><input type="text" id="duRoot" placeholder="Dossier" /></div>
+          <button type="button" class="btn" id="duPick">Dossier…</button>
           <button type="button" class="btn accent" id="duGo">Scanner doublons</button>
         </div>
       </div>
@@ -919,15 +1050,21 @@ async function mountDmDupes(body, api, setStatus, askConfirm) {
       </div>
     </div>`;
 
+  document.getElementById("duPick").onclick = async () => {
+    const res = unwrapData(await api.pick_folder());
+    const path = res?.path || res?.data?.path;
+    if (path) document.getElementById("duRoot").value = path;
+  };
+
   document.getElementById("duGo").onclick = async () => {
     const folder = document.getElementById("duRoot").value.trim();
     if (!folder) return setStatus("Dossier requis.", "error");
     setStatus("Scan doublons…");
-    const start = await api.start_scan_duplicates(folder);
+    const start = unwrapData(await api.start_scan_duplicates(folder));
     if (!start?.ok) return setStatus(start?.error || "Échec", "error");
-    const prog = await pollDm(() => api.get_dup_progress(), setStatus);
-    const raw = prog.raw || {};
-    const groups = raw.groups || raw.data?.groups || [];
+    const prog = await pollDm(() => api.get_dup_progress(), setStatus, setProgress);
+    if (prog.error) return setStatus(prog.error, "error");
+    const groups = dmFilesFromProgress(prog);
     document.getElementById("duBody").innerHTML = (groups || [])
       .slice(0, 200)
       .map((g, i) => {
