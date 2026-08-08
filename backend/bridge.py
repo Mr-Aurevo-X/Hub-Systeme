@@ -866,6 +866,9 @@ class PowerPlanApi(_GateMixin):
     def generate_battery_report(self) -> dict:
         return mod_batt.generate_battery_report()
 
+    def open_battery_folder(self, path: str) -> dict:
+        return mod_batt.open_folder(path)
+
     def open_dedicated(self) -> dict:
         return launch_suite_app("PowerPlan")
 

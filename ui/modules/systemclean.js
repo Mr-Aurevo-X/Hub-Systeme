@@ -4,15 +4,32 @@
  */
 import { mountModuleShell, waitNs, esc, pollUntil, unwrapData } from "./_in_hub.js";
 
-const TRACE_CATS = [
-  { id: "Recent", label: "Fichiers récents" },
-  { id: "JumpLists", label: "Jump lists" },
-  { id: "ExplorerHistory", label: "Historique Explorateur" },
-  { id: "Thumbnails", label: "Miniatures" },
-  { id: "Prefetch", label: "Prefetch" },
-  { id: "ClipboardHistory", label: "Presse-papiers" },
-  { id: "Screenshots", label: "Captures d'écran" },
+/** SoT WinCleaner TRACE_CAT_IDS — Screenshots off by default + ConfirmStrong. */
+const TRACE_CAT_IDS = [
+  "Recent",
+  "JumpLists",
+  "ExplorerHistory",
+  "Thumbnails",
+  "Prefetch",
+  "ClipboardHistory",
+  "Screenshots",
 ];
+
+const TRACE_CAT_FALLBACK = {
+  Recent: { label: "Fichiers récents", description: "Raccourcis Recent (.lnk)" },
+  JumpLists: { label: "Jump lists", description: "AutomaticDestinations / CustomDestinations" },
+  ExplorerHistory: {
+    label: "Historique Explorateur",
+    description: "RecentDocs, TypedPaths, WordWheel, RunMRU",
+  },
+  Thumbnails: { label: "Miniatures / icônes", description: "Thumbcache / IconCache" },
+  Prefetch: { label: "Prefetch", description: "C:\\Windows\\Prefetch" },
+  ClipboardHistory: { label: "Historique presse-papiers", description: "Cache local Clipboard (Win+V)" },
+  Screenshots: {
+    label: "Captures d'écran",
+    description: "Images\\Captures d'écran / Screenshots",
+  },
+};
 
 async function wcApi() {
   return waitNs("systemclean.wincleaner", "prepare_action");
@@ -290,15 +307,16 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
     try {
       const res = await runSync(api, "getCategories", {});
       const data = res.data || res;
-      categories = data.categories || data.Categories || data.items || [];
-      if (!Array.isArray(categories)) categories = [];
+      const all = data.categories || data.Categories || data.items || [];
+      categories = (Array.isArray(all) ? all : []).filter((c) => !c.TracesOnly && !c.tracesOnly);
       document.getElementById("clList").innerHTML = categories.length
         ? categories
             .map((c) => {
               const id = c.id || c.Id || c.name || c.Name;
               const label = c.label || c.Label || c.name || c.Name || id;
               const hint = c.description || c.Description || c.sizeText || "";
-              return `<label><input type="checkbox" value="${esc(id)}" checked /> <span><strong>${esc(
+              const on = c.DefaultOn !== false && c.defaultOn !== false;
+              return `<label><input type="checkbox" value="${esc(id)}" ${on ? "checked" : ""} /> <span><strong>${esc(
                 label
               )}</strong>${hint ? ` <span class="meta">— ${esc(hint)}</span>` : ""}</span></label>`;
             })
@@ -380,63 +398,207 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
 async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
+      <div class="guard-banner" id="trGuard">
+        Traces locales de ce que Windows a ouvert ou affiché. Lister avant d’effacer.
+        Les captures d’écran demandent une confirmation renforcée.
+      </div>
+      <div class="dm-stats" id="trStats" style="margin-bottom:10px">
+        <div class="stat"><span class="label">Catégories</span><span class="value" id="stTraceCats">—</span></div>
+        <div class="stat"><span class="label">Sélection</span><span class="value" id="stTraceSel">0</span></div>
+        <div class="stat"><span class="label">Éléments</span><span class="value" id="stTraceItems">—</span></div>
+      </div>
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Traces Windows</strong>
-          <button type="button" class="btn accent" id="trScan">Lister</button>
-          <button type="button" class="btn danger" id="trClear">Effacer sélection</button>
+          <strong>Catégories de traces</strong>
+          <button type="button" class="btn accent" id="trScan" style="margin-left:auto">Lister</button>
+          <button type="button" class="btn danger" id="trClear">Effacer la sélection</button>
         </div>
-        <div class="check-list" id="trCats" style="margin-top:10px">
-          ${TRACE_CATS.map((c) => `<label><input type="checkbox" value="${c.id}" checked /> ${esc(c.label)}</label>`).join("")}
-        </div>
+        <div class="check-list" id="trCats" style="margin-top:10px"></div>
         <p class="meta" id="trMeta" style="margin-top:8px"></p>
       </div>
-      <div class="panel flex-fill" style="padding:0;min-height:220px">
-        <div class="table-wrap">
-          <table class="data"><thead><tr><th>Catégorie</th><th>Chemin / détail</th></tr></thead><tbody id="trBody"></tbody></table>
+      <div class="panel flex-fill" style="min-height:220px">
+        <strong>Contenu listé</strong>
+        <div id="trResult" class="traces-result" style="margin-top:10px">
+          <p class="meta">Lance une liste pour voir les traces.</p>
         </div>
       </div>
     </div>`;
 
-  document.getElementById("trScan").onclick = async () => {
-    const ids = [...body.querySelectorAll("#trCats input:checked")].map((el) => el.value);
-    setStatus("Scan traces…");
-    try {
-      const res = await runSync(api, "listTraces", { ids, categories: ids });
-      const data = res.data || res;
+  const catsEl = document.getElementById("trCats");
+  const resultEl = document.getElementById("trResult");
+
+  function selectedTraceIds() {
+    return [...catsEl.querySelectorAll("input[type=checkbox]:checked")].map((el) => el.value);
+  }
+
+  function updateTraceSelCount() {
+    const el = document.getElementById("stTraceSel");
+    if (el) el.textContent = String(selectedTraceIds().length);
+  }
+
+  function renderTraceCats(byId) {
+    catsEl.innerHTML = TRACE_CAT_IDS.map((id) => {
+      const c = byId[id] || {};
+      const fb = TRACE_CAT_FALLBACK[id] || { label: id, description: "" };
+      const label = c.Label || c.label || fb.label;
+      const desc = c.Description || c.description || fb.description || "";
+      const on = id !== "Screenshots" && c.DefaultOn !== false && c.defaultOn !== false;
+      return `<label class="check-item">
+        <input type="checkbox" value="${esc(id)}" ${on ? "checked" : ""} />
+        <span><strong>${esc(label)}</strong>${
+          desc ? ` <span class="meta">— ${esc(desc)}</span>` : ""
+        }</span>
+      </label>`;
+    }).join("");
+    document.getElementById("stTraceCats").textContent = String(TRACE_CAT_IDS.length);
+    catsEl.onchange = updateTraceSelCount;
+    updateTraceSelCount();
+  }
+
+  function renderTraceGroups(data) {
+    const cats = data.categories || data.Categories || [];
+    const total =
+      data.totalCount != null
+        ? data.totalCount
+        : Array.isArray(cats)
+          ? cats.reduce((s, c) => s + (Number(c.count || c.Count) || 0), 0)
+          : 0;
+    document.getElementById("stTraceItems").textContent = String(total);
+    document.getElementById("trMeta").textContent = data.totalText
+      ? `${total} élément(s) · ${data.totalText}`
+      : `${total} élément(s)`;
+
+    if (!Array.isArray(cats) || !cats.length) {
+      // Flat fallback if API returns items[] only
       const items = data.items || data.Items || data.traces || [];
-      const rows = Array.isArray(items) ? items : [];
-      document.getElementById("trBody").innerHTML = rows.length
-        ? rows
-            .map(
-              (r) =>
-                `<tr><td>${esc(r.category || r.Category || r.cat || "")}</td><td class="wrap">${esc(
-                  r.path || r.Path || r.name || r.Name || JSON.stringify(r)
-                )}</td></tr>`
-            )
-            .join("")
-        : `<tr><td colspan="2" class="empty-state">Aucune trace</td></tr>`;
-      document.getElementById("trMeta").textContent = `${rows.length} élément(s)`;
+      if (Array.isArray(items) && items.length) {
+        resultEl.innerHTML = `<ul class="traces-list">${items
+          .map((it) => {
+            const name = it.name || it.Name || it.path || it.Path || "";
+            const detail = it.detail || it.Detail || "";
+            const cat = it.category || it.Category || "";
+            return `<li title="${esc(it.path || it.Path || "")}"><strong>${esc(
+              cat
+            )}</strong> ${esc(name)}${detail ? ` → ${esc(detail)}` : ""}</li>`;
+          })
+          .join("")}</ul>`;
+        document.getElementById("stTraceItems").textContent = String(items.length);
+        return;
+      }
+      resultEl.innerHTML = `<p class="meta">Aucune trace pour la sélection.</p>`;
+      return;
+    }
+
+    resultEl.innerHTML = cats
+      .map((c) => {
+        const label = c.label || c.Label || c.id || c.Id || "?";
+        const count = c.count != null ? c.count : c.Count != null ? c.Count : 0;
+        const size = c.sizeText || c.SizeText || fmtBytes(c.bytes || c.Bytes || 0);
+        const note = c.note || c.Note || "";
+        const items = c.items || c.Items || [];
+        const lis = items.length
+          ? items
+              .map((it) => {
+                const name = it.name || it.Name || "";
+                const detail = it.detail || it.Detail || "";
+                const sz = it.size ? ` · ${fmtBytes(it.size)}` : "";
+                const path = it.path || it.Path || "";
+                return `<li title="${esc(path)}">${esc(detail ? `${name} → ${detail}` : name)}${esc(
+                  sz
+                )}</li>`;
+              })
+              .join("")
+          : `<li class="meta">—</li>`;
+        const more =
+          count > items.length
+            ? `<li class="meta">… ${items.length} affiché(s) sur ${count}</li>`
+            : "";
+        return `<div class="traces-group">
+          <h4>${esc(label)} — ${count} · ${esc(size)}${note ? ` · ${esc(note)}` : ""}</h4>
+          <ul class="traces-list">${lis}${more}</ul>
+        </div>`;
+      })
+      .join("");
+  }
+
+  async function ensureCats() {
+    let byId = {};
+    try {
+      const res = await runSync(api, "getCategories", {});
+      const data = res.data || res;
+      const all = data.categories || data.Categories || [];
+      (Array.isArray(all) ? all : []).forEach((c) => {
+        const id = c.Id || c.id;
+        if (id) byId[id] = c;
+      });
+    } catch (_) {
+      byId = {};
+    }
+    renderTraceCats(byId);
+  }
+
+  async function listTraces() {
+    const ids = selectedTraceIds();
+    if (!ids.length) {
+      setStatus("Sélectionnez au moins une catégorie de traces.", "error");
+      return;
+    }
+    setStatus("Liste des traces…");
+    if (setProgress) setProgress(15, "Traces…");
+    try {
+      const res = await runSync(api, "listTraces", { ids });
+      const data = res.data != null ? res.data : res;
+      renderTraceGroups(data || {});
       setStatus("Traces listées.", "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
+    } finally {
+      if (setProgress) setTimeout(() => setProgress(0, ""), 500);
     }
-  };
+  }
+
+  document.getElementById("trScan").onclick = listTraces;
 
   document.getElementById("trClear").onclick = async () => {
-    const ids = [...body.querySelectorAll("#trCats input:checked")].map((el) => el.value);
-    if (!ids.length) return;
+    const ids = selectedTraceIds();
+    if (!ids.length) {
+      setStatus("Sélectionnez au moins une catégorie de traces.", "error");
+      return;
+    }
+    const ok = await askConfirm(
+      `Effacer les traces sélectionnées (${ids.length}) ?`,
+      "Effacer les traces"
+    );
+    if (!ok) return;
+    if (ids.includes("Screenshots")) {
+      const strong = await askConfirm(
+        "ATTENTION : cela supprimera aussi les captures d’écran listées. Continuer ?",
+        "Confirmation captures d’écran"
+      );
+      if (!strong) return;
+    }
     const res = await runJob(
       api,
       "runClean",
       { ids, TracesOnly: true },
-      askConfirm,
-      `Effacer les traces sélectionnées (${ids.length}) ?`,
+      null,
+      null,
       setProgress
     );
-    setStatus(res?.ok ? "Traces effacées." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    if (!res?.ok) {
+      setStatus(res?.error || "Échec", "error");
+      if (setProgress) setTimeout(() => setProgress(0, ""), 600);
+      return;
+    }
+    const data = res.data || res;
+    const freed =
+      data.FreedText || data.freedText || (data.FreedBytes != null ? fmtBytes(data.FreedBytes) : "");
+    setStatus(freed ? `Traces effacées — ${freed}` : "Traces effacées.", "ok");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
+    await listTraces();
   };
+
+  await ensureCats();
 }
 
 async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {

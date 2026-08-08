@@ -402,6 +402,43 @@
   margin-top: 2px;
 }
 
+.hub-inhub .guard-banner {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--bg1) 70%, transparent);
+  margin-bottom: 10px;
+}
+
+.hub-inhub .traces-group {
+  margin-bottom: 14px;
+}
+
+.hub-inhub .traces-group h4 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.hub-inhub .traces-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.hub-inhub .traces-list li {
+  margin: 2px 0;
+}
+
+.hub-inhub .traces-result {
+  max-height: 420px;
+  overflow: auto;
+}
+
 .hub-inhub .dm-crumbs {
   display: flex;
   flex-wrap: wrap;
