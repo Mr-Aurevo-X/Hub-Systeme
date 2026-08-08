@@ -33,6 +33,19 @@ except ImportError:  # pragma: no cover
 _REPARSE = 0x400
 _MAX_CHILDREN = 48
 _TINY_RATIO = 0.008
+
+
+def _is_reparse(entry: os.DirEntry) -> bool:
+    """Skip junctions/symlinks so DiskMap does not loop or leave the scanned volume."""
+    try:
+        return bool(entry.stat(follow_symlinks=False).st_file_attributes & _REPARSE)  # type: ignore[attr-defined]
+    except (AttributeError, OSError):
+        try:
+            return entry.is_symlink()
+        except OSError:
+            return False
+
+
 def _fmt_bytes(n: int) -> str:
     units = ("o", "Ko", "Mo", "Go", "To")
     v = float(max(0, n))
