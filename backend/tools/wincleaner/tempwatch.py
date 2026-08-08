@@ -32,13 +32,15 @@ def temp_sizes() -> dict[str, Any]:
                         files += 1
                     except OSError:
                         continue
+            size_mb = round(total / (1024 * 1024), 2)
             rows.append({
                 "path": str(p),
                 "bytes": total,
-                "sizeMb": round(total / (1024 * 1024), 2),
+                "sizeMb": size_mb,
+                "sizeText": f"{size_mb} Mo",
                 "files": files,
             })
-        return {"ok": True, "folders": rows, "count": len(rows)}
+        return {"ok": True, "folders": rows, "paths": rows, "count": len(rows)}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 

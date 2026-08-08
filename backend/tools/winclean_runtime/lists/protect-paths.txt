@@ -1,0 +1,40 @@
+# Chemins / motifs PROTÉGÉS — jamais supprimables via Désinstaller.
+# Une entrée par ligne ; match substring (insensible à la casse). # = commentaire.
+
+\Windows\
+\System32\
+\SysWOW64\
+\WinSxS\
+\Windows Defender\
+\Windows Security\
+\DriverStore\
+\Microsoft.NET\
+\Common Files\Microsoft Shared\
+\WindowsApps\
+\Boot\
+\Recovery\
+\PerfLogs\
+\System Volume Information\
+\$Recycle.Bin\
+
+csrss
+lsass
+services
+winlogon
+smss
+svchost
+explorer
+fontdrvhost
+dwm
+RuntimeBroker
+SearchHost
+StartMenuExperienceHost
+SystemSettings
+SecurityHealthService
+MsMpEng
+NisSrv
+powershell
+pwsh
+cmd
+conhost
+WinClean

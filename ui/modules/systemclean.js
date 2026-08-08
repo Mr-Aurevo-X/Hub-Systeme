@@ -147,7 +147,7 @@ async function renderSegment(id, body, ctx) {
         body.innerHTML = `<div class="empty-state">Bridge Python indisponible.</div>`;
         return;
       }
-      if (id === "wc-health") return mountHealth(body, api, setStatus);
+      if (id === "wc-health") return mountHealth(body, api, setStatus, askConfirm);
       if (id === "wc-clean") return mountClean(body, api, setStatus, askConfirm, setProgress);
       if (id === "wc-traces") return mountTraces(body, api, setStatus, askConfirm, setProgress);
       if (id === "wc-debloat") return mountDebloat(body, api, setStatus, askConfirm, setProgress);
@@ -179,7 +179,7 @@ async function renderSegment(id, body, ctx) {
 
 /* ── WinCleaner panels ───────────────────────────────────────────────────── */
 
-async function mountHealth(body, api, setStatus) {
+async function mountHealth(body, api, setStatus, askConfirm) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="card-grid" id="hcCards">
@@ -213,16 +213,19 @@ async function mountHealth(body, api, setStatus) {
       const data = res.data || res;
       document.getElementById("hcOut").textContent = JSON.stringify(data, null, 2).slice(0, 4000);
       const cards = document.getElementById("hcCards");
-      const disk = data.disk || data.Disk || {};
-      let adminLabel = "—";
+      const disks = data.disks || data.Disks || [];
+      const disk0 = Array.isArray(disks) && disks.length ? disks[0] : data.disk || data.Disk || {};
+      let adminLabel = data.admin === true || data.Admin === true ? "Oui" : data.admin === false ? "Non" : "—";
       try {
-        if (typeof api.is_admin === "function") {
+        if (adminLabel === "—" && typeof api.is_admin === "function") {
           const adm = await api.is_admin();
           adminLabel = adm === true || adm?.admin === true ? "Oui" : "Non";
         }
       } catch (_) {}
       cards.innerHTML = `
-        <div class="card"><span class="label">Disque libre</span><span class="value">${esc(disk.FreeText || disk.freeText || "—")}</span></div>
+        <div class="card"><span class="label">Disque libre</span><span class="value">${esc(
+          disk0.FreeText || disk0.freeText || disk0.freeLabel || "—"
+        )}</span></div>
         <div class="card"><span class="label">Admin</span><span class="value">${esc(adminLabel)}</span></div>
         <div class="card"><span class="label">Statut</span><span class="value">OK</span></div>`;
       setStatus("Santé actualisée.", "ok");
@@ -234,14 +237,16 @@ async function mountHealth(body, api, setStatus) {
   async function loadTemp() {
     try {
       const res = await api.temp_sizes();
-      const rows = res?.paths || res?.items || res?.data || [];
+      const rows = res?.folders || res?.paths || res?.items || res?.data || [];
       const list = Array.isArray(rows) ? rows : [];
       document.getElementById("hcTempBody").innerHTML = list.length
         ? list
             .map(
               (r) =>
                 `<tr><td class="wrap">${esc(r.path || r.Path || r.name || "")}</td><td>${esc(
-                  r.sizeText || r.SizeText || fmtBytes(r.size || r.Bytes || 0)
+                  r.sizeText ||
+                    r.SizeText ||
+                    (r.sizeMb != null ? `${r.sizeMb} Mo` : fmtBytes(r.bytes || r.size || r.Bytes || 0))
                 )}</td></tr>`
             )
             .join("")
@@ -254,18 +259,21 @@ async function mountHealth(body, api, setStatus) {
   document.getElementById("hcRefresh").onclick = loadHealth;
   document.getElementById("hcTemp").onclick = loadTemp;
   document.getElementById("hcRecycle").onclick = async () => {
+    if (!(await askConfirm("Vider la corbeille ?", "Confirmer"))) return;
     const prep = await api.prepare_empty_recycle_bin();
     if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
     const r = await api.empty_recycle_bin(prep.token);
     setStatus(r?.ok ? "Corbeille vidée." : r?.error || "Échec", r?.ok ? "ok" : "error");
   };
   document.getElementById("hcIcons").onclick = async () => {
+    if (!(await askConfirm("Reconstruire le cache d'icônes ?", "Confirmer"))) return;
     const prep = await api.prepare_rebuild_icon_cache();
     if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
     const r = await api.rebuild_icon_cache(prep.token);
     setStatus(r?.ok ? "Cache icônes reconstruit." : r?.error || "Échec", r?.ok ? "ok" : "error");
   };
   document.getElementById("hcRecent").onclick = async () => {
+    if (!(await askConfirm("Effacer les fichiers récents ?", "Confirmer"))) return;
     const prep = await api.prepare_clear_recent_files();
     if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
     const r = await api.clear_recent_files(prep.token);
@@ -1646,7 +1654,9 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
     if (!del) return;
     const path = del.getAttribute("data-del");
     if (!(await askConfirm(`Supprimer « ${path} » ?`))) return;
-    const r = await api.delete_large_file(path);
+    const prep = await api.prepare_delete_large_file(path);
+    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    const r = await api.delete_large_file(path, prep.token);
     setStatus(r?.ok ? "Supprimé." : r?.error || "Échec", r?.ok ? "ok" : "error");
   });
 }
@@ -1701,7 +1711,9 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
     if (!del) return;
     const path = del.getAttribute("data-del");
     if (!(await askConfirm(`Supprimer le dossier vide « ${path} » ?`))) return;
-    const r = await api.delete_empty_folder(path);
+    const prep = await api.prepare_delete_empty_folder(path);
+    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    const r = await api.delete_empty_folder(path, prep.token);
     setStatus(r?.ok ? "Supprimé." : r?.error || "Échec", r?.ok ? "ok" : "error");
   });
 }

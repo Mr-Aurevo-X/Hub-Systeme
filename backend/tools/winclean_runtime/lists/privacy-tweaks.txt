@@ -1,0 +1,20 @@
+# Tweaks confidentialité — format: HivePath|ValueName|DWord
+# Appliqués uniquement si l'option Privacy est cochée
+HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo|Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SystemPaneSuggestionsEnabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SubscribedContent-338388Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SubscribedContent-338389Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SubscribedContent-338393Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SubscribedContent-353694Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SubscribedContent-353696Enabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SoftLandingEnabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|OemPreInstalledAppsEnabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|PreInstalledAppsEnabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|SilentInstalledAppsEnabled|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager|ContentDeliveryAllowed|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy|TailoredExperiencesWithDiagnosticDataEnabled|0
+HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection|AllowTelemetry|1
+HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection|AllowTelemetry|1
+HKCU:\Software\Microsoft\Siuf\Rules|NumberOfSIUFInPeriod|0
+HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings|IsDynamicSearchBoxEnabled|0
+HKCU:\Software\Policies\Microsoft\Windows\Explorer|DisableSearchBoxSuggestions|1

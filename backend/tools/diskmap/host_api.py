@@ -21,7 +21,7 @@ from tools.diskmap import duplicates as mod_duplicates  # noqa: E402
 from tools.diskmap import emptyfolders as mod_empty  # noqa: E402
 from tools.diskmap import fastfind as mod_fastfind  # noqa: E402
 from tools.diskmap import spacediff as mod_spacediff  # noqa: E402
-from security import safe_open_path  # noqa: E402
+from security import ConfirmGate, safe_open_path  # noqa: E402
 from suite_launch import resolve_suite_accent, resolve_suite_language  # noqa: E402
 
 try:
@@ -93,8 +93,9 @@ def _prune_children(node: _Node) -> None:
 
 
 class DiskMapHostApi:
-    def __init__(self, window: Any = None) -> None:
+    def __init__(self, window: Any = None, gate: ConfirmGate | None = None) -> None:
         self._window: Any = window
+        self._confirm = gate or ConfirmGate(ttl_seconds=90.0)
         self._maximized = False
         self._lock = threading.RLock()
         self._cancel = threading.Event()
@@ -576,7 +577,17 @@ class DiskMapHostApi:
             out["result"] = prog["result"]
         return out
 
-    def delete_large_file(self, path: str) -> dict:
+    def prepare_delete_large_file(self, path: str = "") -> dict:
+        payload = {"path": str(path or "")}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("delete_large_file", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
+    def delete_large_file(self, path: str, token: str | None = None) -> dict:
+        payload = {"path": str(path or "")}
+        if not self._confirm.consume(str(token or ""), "delete_large_file", payload):
+            return {"ok": False, "error": "Jeton de confirmation invalide ou expire"}
         return mod_bigfiles.delete_file(path)
 
     # ── Hub: Dossiers vides (EmptyFolders) ─────────────────────────────────
@@ -628,7 +639,17 @@ class DiskMapHostApi:
             out["result"] = prog["result"]
         return out
 
-    def delete_empty_folder(self, path: str) -> dict:
+    def prepare_delete_empty_folder(self, path: str = "") -> dict:
+        payload = {"path": str(path or "")}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("delete_empty_folder", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
+    def delete_empty_folder(self, path: str, token: str | None = None) -> dict:
+        payload = {"path": str(path or "")}
+        if not self._confirm.consume(str(token or ""), "delete_empty_folder", payload):
+            return {"ok": False, "error": "Jeton de confirmation invalide ou expire"}
         return mod_empty.delete_folder(path)
 
     # ── Hub: Doublons (DuplicateFinder) ────────────────────────────────────
@@ -669,8 +690,20 @@ class DiskMapHostApi:
         with self._hub_lock:
             return dict(self._dup_progress)
 
-    def trash_dup_paths(self, paths: list) -> dict:
-        return mod_duplicates.trash_paths(paths if isinstance(paths, list) else [])
+    def prepare_trash_dup_paths(self, paths: list | None = None) -> dict:
+        path_list = list(paths) if isinstance(paths, list) else []
+        payload = {"paths": path_list}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("trash_dup_paths", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
+
+    def trash_dup_paths(self, paths: list | None = None, token: str | None = None) -> dict:
+        path_list = list(paths) if isinstance(paths, list) else []
+        payload = {"paths": path_list}
+        if not self._confirm.consume(str(token or ""), "trash_dup_paths", payload):
+            return {"ok": False, "error": "Jeton de confirmation invalide ou expire"}
+        return mod_duplicates.trash_paths(path_list)
 
     # ── Hub: Santé (DiskHealth) ────────────────────────────────────────────
     def get_disk_info(self) -> dict:

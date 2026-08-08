@@ -24,8 +24,16 @@ from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_l
 
 
 def winclean_runtime_root() -> Path:
-    """PS API root: api/Invoke-WinCleanApi.ps1 + modules/*.ps1 + logs/."""
+    """PS API root: api/Invoke-WinCleanApi.ps1 + modules/*.ps1 + lists/ + logs/."""
     return Path(__file__).resolve().parent.parent / "winclean_runtime"
+
+
+def ensure_winclean_runtime_layout(root: Path | None = None) -> Path:
+    """Ensure runtime dirs exist (lists required for debloat / exclusions / purge)."""
+    base = Path(root) if root else winclean_runtime_root()
+    for sub in ("api", "modules", "lists", "logs"):
+        (base / sub).mkdir(parents=True, exist_ok=True)
+    return base
 
 
 def is_admin() -> bool:
@@ -96,7 +104,7 @@ TOKEN_ACTIONS = frozenset({
 
 class WinCleanerHostApi:
     def __init__(self, gate: ConfirmGate | None = None, root: Path | None = None) -> None:
-        self.root = Path(root) if root else winclean_runtime_root()
+        self.root = ensure_winclean_runtime_layout(Path(root) if root else None)
         self.api_ps1 = self.root / "api" / "Invoke-WinCleanApi.ps1"
         self.progress_path = self.root / "logs" / "job-progress.json"
         self._job_lock = threading.Lock()

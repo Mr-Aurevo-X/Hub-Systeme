@@ -1,0 +1,3 @@
+﻿# WinCleaner — exclusions utilisateur (un motif ou chemin par ligne)
+# Les chemins contenant un motif sont ignorés au nettoyage / purge
+

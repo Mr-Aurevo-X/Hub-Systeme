@@ -1,0 +1,7 @@
+# Services non essentiels à désactiver (un nom par ligne)
+# Ne pas y mettre : wuauserv, WinDefend, Audio*, RpcSs, EventLog, etc.
+Fax
+RemoteRegistry
+WMPNetworkSvc
+DiagTrack
+dmwappushservice

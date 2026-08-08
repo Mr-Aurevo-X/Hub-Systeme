@@ -1179,7 +1179,7 @@ class SystemCleanApi(_GateMixin):
         super().__init__(gate)
         self.apps = ["WinCleaner", "DiskMap"]
         self.wincleaner = WinCleanerHostApi(gate)
-        self.diskmap = DiskMapHostApi()
+        self.diskmap = DiskMapHostApi(gate=gate)
 
     # WinCleaner mutators (flat shortcuts — prefer .wincleaner for full API)
     def list_recycle_bin(self) -> dict:
