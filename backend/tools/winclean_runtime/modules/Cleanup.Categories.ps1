@@ -98,6 +98,7 @@ function Get-WinCleanCategories {
             NeedsAdmin   = $false
             DefaultOn    = $true
             Profiles     = @('Gaming', 'Max')
+            TracesOnly   = $true
         }
         Prefetch = @{
             Id          = 'Prefetch'
@@ -107,6 +108,7 @@ function Get-WinCleanCategories {
             NeedsAdmin  = $true
             DefaultOn   = $true
             Profiles    = @('Max')
+            TracesOnly  = $true
         }
         CrashDumps = @{
             Id          = 'CrashDumps'

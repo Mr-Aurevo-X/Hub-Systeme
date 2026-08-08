@@ -104,9 +104,11 @@ TOKEN_ACTIONS = frozenset({
 
 class WinCleanerHostApi:
     def __init__(self, gate: ConfirmGate | None = None, root: Path | None = None) -> None:
-        self.root = ensure_winclean_runtime_layout(Path(root) if root else None)
-        self.api_ps1 = self.root / "api" / "Invoke-WinCleanApi.ps1"
-        self.progress_path = self.root / "logs" / "job-progress.json"
+        # Keep Path handles private — pywebview recursively exposes public attrs
+        # (Path.chmod / glob / …) and bloated the JS API by ~750 junk methods.
+        self._root = ensure_winclean_runtime_layout(Path(root) if root else None)
+        self._api_ps1 = self._root / "api" / "Invoke-WinCleanApi.ps1"
+        self._progress_path = self._root / "logs" / "job-progress.json"
         self._job_lock = threading.Lock()
         self._proc_lock = threading.Lock()
         self._job_thread: threading.Thread | None = None
@@ -118,11 +120,31 @@ class WinCleanerHostApi:
         self._window: Any = None
         self._maximized = False
 
+    def set_window(self, window: Any) -> None:
+        """Bound by hub Api.set_window (folder dialogs / HWND)."""
+        self._window = window
+
+    def runtime_info(self) -> dict:
+        """Safe diagnostic (no Path objects exposed to pywebview)."""
+        return {
+            "ok": True,
+            "root": str(self._root),
+            "apiPs1": str(self._api_ps1),
+            "apiExists": self._api_ps1.is_file(),
+            "progressPath": str(self._progress_path),
+            "admin": is_admin(),
+        }
+
     def _normalize_action(self, action: str) -> str:
         return str(action or "").strip()
 
     def _normalize_payload(self, payload: dict | None) -> dict:
-        return dict(payload or {})
+        """Stable dict for ConfirmGate digests (JS → JSON → Python)."""
+        raw = payload if isinstance(payload, dict) else {}
+        try:
+            return json.loads(json.dumps(raw, ensure_ascii=False, sort_keys=True, default=str))
+        except (TypeError, ValueError):
+            return dict(raw)
 
     def prepare_action(self, action: str, payload: dict | None = None) -> dict:
         act = self._normalize_action(action)
@@ -238,8 +260,8 @@ class WinCleanerHostApi:
 
     def _run_ps(self, action: str, payload: dict) -> dict:
         """Invoke PowerShell API (caller already validated action / token)."""
-        if not self.api_ps1.is_file():
-            return {"ok": False, "error": f"API introuvable: {self.api_ps1}", "data": None}
+        if not self._api_ps1.is_file():
+            return {"ok": False, "error": f"API introuvable: {self._api_ps1}", "data": None}
 
         req = {"action": action, "payload": payload}
         fd_in, path_in = tempfile.mkstemp(prefix="winclean-in-", suffix=".json")
@@ -262,13 +284,13 @@ class WinCleanerHostApi:
                     "-ExecutionPolicy",
                     "Bypass",
                     "-File",
-                    str(self.api_ps1),
+                    str(self._api_ps1),
                     "-InFile",
                     path_in,
                     "-OutFile",
                     path_out,
                 ],
-                cwd=str(self.root),
+                cwd=str(self._root),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 creationflags=creationflags)
@@ -314,7 +336,7 @@ class WinCleanerHostApi:
         self, percent: int, phase: str, detail: str, done: bool, error: str | None = None
     ) -> None:
         try:
-            self.progress_path.parent.mkdir(parents=True, exist_ok=True)
+            self._progress_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "percent": percent,
                 "phase": phase,
@@ -323,12 +345,12 @@ class WinCleanerHostApi:
                 "error": error,
                 "updatedAt": None,
             }
-            self.progress_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            self._progress_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         except OSError:
             pass
 
     def _read_progress_file(self) -> dict[str, Any]:
-        if not self.progress_path.is_file():
+        if not self._progress_path.is_file():
             return {
                 "percent": 0,
                 "phase": "",
@@ -338,7 +360,7 @@ class WinCleanerHostApi:
                 "updatedAt": None,
             }
         try:
-            return json.loads(self.progress_path.read_text(encoding="utf-8"))
+            return json.loads(self._progress_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return {
                 "percent": 0,

@@ -210,18 +210,75 @@ class DiskMapHostApi:
                 )
         return {"ok": True, "error": None, "data": {"drives": drives}}
 
+    def _pick_folder_win32(self) -> dict:
+        """Fallback folder picker when pywebview window is not bound yet."""
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            ole32 = ctypes.windll.ole32  # type: ignore[attr-defined]
+            shell32 = ctypes.windll.shell32  # type: ignore[attr-defined]
+            ole32.CoInitialize(None)
+
+            class BROWSEINFO(ctypes.Structure):
+                _fields_ = [
+                    ("hwndOwner", wintypes.HWND),
+                    ("pidlRoot", ctypes.c_void_p),
+                    ("pszDisplayName", ctypes.c_wchar_p),
+                    ("lpszTitle", ctypes.c_wchar_p),
+                    ("ulFlags", wintypes.UINT),
+                    ("lpfn", ctypes.c_void_p),
+                    ("lParam", ctypes.c_long),
+                    ("iImage", ctypes.c_int),
+                ]
+
+            buf = ctypes.create_unicode_buffer(260)
+            bi = BROWSEINFO()
+            bi.hwndOwner = None
+            bi.pidlRoot = None
+            bi.pszDisplayName = ctypes.cast(buf, ctypes.c_wchar_p)
+            bi.lpszTitle = "Choisir un dossier"
+            bi.ulFlags = 0x00000040  # BIF_NEWDIALOGSTYLE
+            bi.lpfn = None
+            bi.lParam = 0
+            bi.iImage = 0
+            pidl = shell32.SHBrowseForFolderW(ctypes.byref(bi))
+            if not pidl:
+                return {"ok": True, "error": None, "data": {"path": None}}
+            path_buf = ctypes.create_unicode_buffer(1024)
+            ok = bool(shell32.SHGetPathFromIDListW(pidl, path_buf))
+            ole32.CoTaskMemFree(pidl)
+            if ok and path_buf.value:
+                return {"ok": True, "error": None, "data": {"path": path_buf.value}}
+            return {"ok": True, "error": None, "data": {"path": None}}
+        except Exception as exc:
+            return {
+                "ok": False,
+                "error": f"Sélecteur dossier indisponible: {exc}",
+                "data": None,
+            }
+
     def pick_folder(self) -> dict:
         try:
-            result = self._window.create_file_dialog(  # type: ignore[union-attr]
-                webview.FOLDER_DIALOG,
-                allow_multiple=False,
-            )
-            if not result:
-                return {"ok": True, "error": None, "data": {"path": None}}
-            path = result[0] if isinstance(result, (list, tuple)) else result
-            return {"ok": True, "error": None, "data": {"path": str(path)}}
+            if self._window is not None and webview is not None:
+                result = self._window.create_file_dialog(  # type: ignore[union-attr]
+                    webview.FOLDER_DIALOG,
+                    allow_multiple=False,
+                )
+                if not result:
+                    return {"ok": True, "error": None, "data": {"path": None}}
+                path = result[0] if isinstance(result, (list, tuple)) else result
+                return {"ok": True, "error": None, "data": {"path": str(path)}}
+            return self._pick_folder_win32()
         except Exception as exc:
-            return {"ok": False, "error": str(exc), "data": None}
+            fb = self._pick_folder_win32()
+            if fb.get("ok"):
+                return fb
+            return {
+                "ok": False,
+                "error": str(exc) or fb.get("error") or "pick_folder a échoué",
+                "data": None,
+            }
 
     def start_scan(self, path: str) -> dict:
         if not path or not isinstance(path, str):

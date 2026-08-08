@@ -170,6 +170,15 @@ try {
         'runClean' {
             $ids = @($p.ids)
             if (-not $ids -or $ids.Count -eq 0) { Fail 'ids requis'; break }
+            # UI Traces segment sends TracesOnly=true — keep only trace category ids.
+            $tracesOnly = $false
+            if ($null -ne $p.TracesOnly) { $tracesOnly = [bool]$p.TracesOnly }
+            elseif ($null -ne $p.tracesOnly) { $tracesOnly = [bool]$p.tracesOnly }
+            if ($tracesOnly) {
+                $traceIds = @(Get-WinCleanTraceCategoryIds)
+                $ids = @($ids | Where-Object { $traceIds -contains $_ })
+                if (-not $ids -or $ids.Count -eq 0) { Fail 'Aucune catégorie de traces valide'; break }
+            }
             Write-WinCleanProgress -Percent 3 -Phase 'Nettoyage' -Detail 'Snapshot disque...'
             $before = New-WinCleanDiskSnapshot -Label 'before-clean'
             $result = Invoke-WinCleanCleanup -CategoryIds $ids -LogPath $Global:WinCleanCurrentLog
@@ -181,6 +190,7 @@ try {
                 FreedBytes = [long]$result.FreedBytes
                 FreedText  = $result.FreedText
                 diskDelta  = $delta
+                tracesOnly = $tracesOnly
             }
         }
 
@@ -204,21 +214,34 @@ try {
         }
 
         'runOptimizations' {
+            # Missing keys must NOT coerce to $false ([bool]$null → $false) — defaults = all on.
+            $doPrivacy = if ($null -ne $p.privacy) { [bool]$p.privacy } else { $true }
+            $doTasks = if ($null -ne $p.tasks) { [bool]$p.tasks } else { $true }
+            $doServices = if ($null -ne $p.services) { [bool]$p.services } else { $true }
+            $doFeatures = if ($null -ne $p.features) { [bool]$p.features } else { $true }
+            $doComponent = if ($null -ne $p.componentCleanup) { [bool]$p.componentCleanup } else { $true }
             Write-WinCleanProgress -Percent 10 -Phase 'Optimisations' -Detail 'Application...'
             Invoke-WinCleanOptimizations `
-                -Privacy:([bool]$p.privacy) `
-                -Tasks:([bool]$p.tasks) `
-                -Services:([bool]$p.services) `
+                -Privacy:$doPrivacy `
+                -Tasks:$doTasks `
+                -Services:$doServices `
                 -BaseDir $Global:WinCleanRoot `
                 -LogPath $Global:WinCleanCurrentLog
             Write-WinCleanProgress -Percent 60 -Phase 'Optimisations' -Detail 'Features...'
-            if ($p.features -or $p.componentCleanup) {
+            if ($doFeatures -or $doComponent) {
                 Invoke-WinCleanFeatures `
-                    -OptionalFeatures:([bool]$p.features) `
-                    -ComponentCleanup:([bool]$p.componentCleanup) `
+                    -OptionalFeatures:$doFeatures `
+                    -ComponentCleanup:$doComponent `
                     -LogPath $Global:WinCleanCurrentLog
             }
-            Ok @{ message = 'Optimisations appliquées' }
+            Ok @{
+                message = 'Optimisations appliquées'
+                privacy = $doPrivacy
+                tasks = $doTasks
+                services = $doServices
+                features = $doFeatures
+                componentCleanup = $doComponent
+            }
         }
 
         'analyzeWinSxS' {

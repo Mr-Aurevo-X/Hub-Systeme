@@ -39,58 +39,141 @@ async function dmApi() {
   return waitNs("systemclean.diskmap", "list_drives");
 }
 
+/** Surface real backend / bridge errors (never swallow empty messages). */
+function apiErr(res, fallback = "Échec") {
+  if (res == null) return fallback + " (réponse vide)";
+  if (typeof res === "string") return res;
+  const nested = res.data && typeof res.data === "object" ? res.data : null;
+  return (
+    res.error ||
+    nested?.error ||
+    res.message ||
+    nested?.message ||
+    (res.ok === false ? fallback : null) ||
+    fallback
+  );
+}
+
 async function runSync(api, action, payload = {}) {
-  const res = await api.run(action, payload);
-  if (!res || res.ok === false) {
-    throw new Error((res && res.error) || "Échec " + action);
+  if (!api || typeof api.run !== "function") {
+    throw new Error("API wincleaner.run indisponible (bridge)");
   }
-  return res.data != null ? res : res;
+  let res;
+  try {
+    res = await api.run(action, payload || {});
+  } catch (e) {
+    throw new Error(String(e?.message || e) || "Exception " + action);
+  }
+  if (!res || res.ok === false) {
+    throw new Error(apiErr(res, "Échec " + action));
+  }
+  return res;
 }
 
 function summarizeClean(data) {
   if (!data || typeof data !== "object") return "";
   const d = data.data || data;
   const freed = d.FreedText || d.freedText || (d.FreedBytes != null ? fmtBytes(d.FreedBytes) : "");
-  const before = d.BeforeText || d.beforeText || d.EstimatedText || d.estimatedText || "";
+  const before =
+    d.BeforeText ||
+    d.beforeText ||
+    d.EstimatedText ||
+    d.estimatedText ||
+    d.totalText ||
+    d.TotalText ||
+    "";
   const delta = d.diskDelta || d.DiskDelta || d.delta || null;
   const parts = [];
   if (before) parts.push("Avant / estimé : " + before);
   if (freed) parts.push("Libéré : " + freed);
   if (delta) {
-    const t = typeof delta === "object" ? delta.Text || delta.text || JSON.stringify(delta) : String(delta);
-    parts.push("Disque : " + t);
+    let t = "";
+    if (typeof delta === "object") {
+      const rows = delta.Rows || delta.rows || [];
+      if (Array.isArray(rows) && rows.length) {
+        t = rows
+          .map((r) => `${r.Name || r.name || "?"}: ${r.DeltaText || r.deltaText || ""}`)
+          .filter(Boolean)
+          .join(" · ");
+      } else {
+        t = delta.Text || delta.text || "";
+      }
+    } else {
+      t = String(delta);
+    }
+    if (t) parts.push("Disque : " + t);
   }
   return parts.join("\n");
 }
 
+/** Stable plain object for ConfirmGate (same shape on prepare + start). */
+function stablePayload(payload) {
+  try {
+    return JSON.parse(JSON.stringify(payload || {}));
+  } catch (_) {
+    return payload || {};
+  }
+}
+
 async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress) {
+  if (!api || typeof api.start_action !== "function") {
+    return { ok: false, error: "API wincleaner.start_action indisponible (bridge)" };
+  }
   if (confirmMsg) {
     const ok = await askConfirm(confirmMsg, "Confirmer l'action");
     if (!ok) return { ok: false, error: "Annulé" };
   }
-  const prep = await api.prepare_action(action, payload || {});
-  if (!prep || !prep.ok || !prep.token) {
-    return { ok: false, error: (prep && prep.error) || "Confirmation refusée" };
+  const pl = stablePayload(payload);
+  let prep;
+  try {
+    prep = await api.prepare_action(action, pl);
+  } catch (e) {
+    return { ok: false, error: "prepare_action: " + String(e?.message || e) };
   }
-  const started = await api.start_action(action, payload || {}, prep.token);
+  if (!prep || !prep.ok || !prep.token) {
+    return { ok: false, error: apiErr(prep, "Confirmation refusée (ConfirmGate)") };
+  }
+  let started;
+  try {
+    started = await api.start_action(action, pl, prep.token);
+  } catch (e) {
+    return { ok: false, error: "start_action: " + String(e?.message || e) };
+  }
   if (!started || !started.ok) {
-    return { ok: false, error: (started && started.error) || "Démarrage refusé" };
+    return { ok: false, error: apiErr(started, "Démarrage refusé") };
   }
   const progress = await pollUntil(
     () => api.get_action_progress(),
     {
       intervalMs: 450,
       timeoutMs: action === "sfcScan" || action === "dismRestoreHealth" ? 1800000 : 300000,
-      onTick: ({ percent, phase, detail }) => {
-        if (setProgress) setProgress(percent || 0, `${percent || 0}% · ${phase || ""}${detail ? " — " + detail : ""}`);
+      onTick: ({ percent, phase, detail, error }) => {
+        if (setProgress) {
+          const base = `${percent || 0}% · ${phase || ""}${detail ? " — " + detail : ""}`;
+          setProgress(percent || 0, error ? base + " · " + error : base);
+        }
       },
     }
   );
-  if (progress.error && progress.done) {
-    return { ok: false, error: progress.error };
+  if (progress?.error === "Timeout") {
+    try {
+      if (typeof api.cancel_action === "function") await api.cancel_action();
+    } catch (_) {}
+    return { ok: false, error: "Timeout — job annulé. Relancez l'action." };
   }
-  const result = await api.get_action_result();
-  return result || { ok: false, error: "Aucun résultat" };
+  if (progress?.error && (progress.done || progress.ok === false)) {
+    return { ok: false, error: apiErr(progress, "Échec job") };
+  }
+  let result;
+  try {
+    result = await api.get_action_result();
+  } catch (e) {
+    return { ok: false, error: "get_action_result: " + String(e?.message || e) };
+  }
+  if (!result || result.ok === false) {
+    return { ok: false, error: apiErr(result, "Aucun résultat"), data: result?.data };
+  }
+  return result;
 }
 
 function fmtBytes(n) {
@@ -222,12 +305,25 @@ async function mountHealth(body, api, setStatus, askConfirm) {
           adminLabel = adm === true || adm?.admin === true ? "Oui" : "Non";
         }
       } catch (_) {}
+      const freeLabel =
+        disk0.FreeText || disk0.freeText || disk0.freeLabel || disk0.Free || "—";
+      const usedLabel = disk0.UsedText || disk0.usedText || disk0.usedLabel || "";
+      const folders = data.folders || data.Folders || [];
+      const folderHint =
+        Array.isArray(folders) && folders[0]
+          ? folders[0].SizeText || folders[0].sizeText || folders[0].Label || folders[0].label || ""
+          : "";
       cards.innerHTML = `
         <div class="card"><span class="label">Disque libre</span><span class="value">${esc(
-          disk0.FreeText || disk0.freeText || disk0.freeLabel || "—"
+          String(freeLabel)
+        )}</span></div>
+        <div class="card"><span class="label">Utilisé</span><span class="value">${esc(
+          String(usedLabel || "—")
         )}</span></div>
         <div class="card"><span class="label">Admin</span><span class="value">${esc(adminLabel)}</span></div>
-        <div class="card"><span class="label">Statut</span><span class="value">OK</span></div>`;
+        <div class="card"><span class="label">Dossier</span><span class="value">${esc(
+          String(folderHint || "OK")
+        )}</span></div>`;
       setStatus("Santé actualisée.", "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
@@ -237,7 +333,11 @@ async function mountHealth(body, api, setStatus, askConfirm) {
   async function loadTemp() {
     try {
       const res = await api.temp_sizes();
-      const rows = res?.folders || res?.paths || res?.items || res?.data || [];
+      if (res && res.ok === false) {
+        setStatus(apiErr(res, "temp_sizes"), "error");
+        return;
+      }
+      const rows = res?.folders || res?.paths || res?.items || res?.data?.folders || res?.data || [];
       const list = Array.isArray(rows) ? rows : [];
       document.getElementById("hcTempBody").innerHTML = list.length
         ? list
@@ -757,9 +857,16 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <p class="meta" style="margin-bottom:10px">
-          Optimisations WinCleaner : profils d’affinage Windows, SFC (intégrité fichiers système),
-          DISM RestoreHealth (image Windows), analyse WinSxS (composants). Chaque action est confirmée.
+          Optimisations WinCleaner : privacy / tâches / services / features, plus SFC, DISM et WinSxS.
+          Chaque action est confirmée (ConfirmGate).
         </p>
+        <div class="check-list" id="opFlags" style="margin-bottom:12px">
+          <label><input type="checkbox" id="opPrivacy" checked /> Privacy tweaks</label>
+          <label><input type="checkbox" id="opTasks" checked /> Tâches planifiées bloat</label>
+          <label><input type="checkbox" id="opServices" checked /> Services bloat</label>
+          <label><input type="checkbox" id="opFeatures" checked /> Features optionnelles</label>
+          <label><input type="checkbox" id="opComponent" checked /> Nettoyage composants</label>
+        </div>
         <div class="toolbar-row" style="flex-wrap:wrap">
           <button type="button" class="btn accent" id="opRun">Optimisations Windows</button>
           <button type="button" class="btn" id="opSfc">SFC /scannow</button>
@@ -771,11 +878,21 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
       </div>
     </div>`;
 
-  async function job(action, msg, detail) {
+  function optPayload() {
+    return {
+      privacy: !!document.getElementById("opPrivacy")?.checked,
+      tasks: !!document.getElementById("opTasks")?.checked,
+      services: !!document.getElementById("opServices")?.checked,
+      features: !!document.getElementById("opFeatures")?.checked,
+      componentCleanup: !!document.getElementById("opComponent")?.checked,
+    };
+  }
+
+  async function job(action, msg, detail, payload) {
     setStatus(msg);
     document.getElementById("opOut").textContent = detail + "\n\nDémarrage…";
     document.getElementById("opProg").style.width = "12%";
-    const res = await runJob(api, action, {}, askConfirm, msg + " Continuer ?", (pct, label) => {
+    const res = await runJob(api, action, payload || {}, askConfirm, msg + " Continuer ?", (pct, label) => {
       document.getElementById("opProg").style.width = (pct || 0) + "%";
       if (setProgress) setProgress(pct, label);
     });
@@ -791,14 +908,24 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
     if (setProgress) setTimeout(() => setProgress(0, ""), 800);
   }
 
-  document.getElementById("opRun").onclick = () =>
-    job("runOptimizations", "Lancer les optimisations Windows ?", "Action : runOptimizations — affinage / nettoyage ciblé Windows.");
+  document.getElementById("opRun").onclick = () => {
+    const pl = optPayload();
+    if (!pl.privacy && !pl.tasks && !pl.services && !pl.features && !pl.componentCleanup) {
+      return setStatus("Cochez au moins une option d’optimisation.", "error");
+    }
+    job(
+      "runOptimizations",
+      "Lancer les optimisations Windows ?",
+      "Action : runOptimizations — " + JSON.stringify(pl),
+      pl
+    );
+  };
   document.getElementById("opSfc").onclick = () =>
-    job("sfcScan", "Lancer SFC /scannow ?", "Action : sfcScan — vérifie et répare les fichiers système protégés (peut prendre longtemps).");
+    job("sfcScan", "Lancer SFC /scannow ?", "Action : sfcScan — vérifie et répare les fichiers système protégés (peut prendre longtemps).", {});
   document.getElementById("opDism").onclick = () =>
-    job("dismRestoreHealth", "Lancer DISM RestoreHealth ?", "Action : dismRestoreHealth — répare l’image Windows via DISM (long).");
+    job("dismRestoreHealth", "Lancer DISM RestoreHealth ?", "Action : dismRestoreHealth — répare l’image Windows via DISM (long).", {});
   document.getElementById("opWinsxs").onclick = () =>
-    job("analyzeWinSxS", "Analyser WinSxS ?", "Action : analyzeWinSxS — analyse le magasin de composants (lecture / rapport).");
+    job("analyzeWinSxS", "Analyser WinSxS ?", "Action : analyzeWinSxS — analyse le magasin de composants (lecture / rapport).", {});
 }
 
 async function mountSessions(body, api, setStatus) {
@@ -1619,9 +1746,15 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
     </div>`;
 
   document.getElementById("lgPick").onclick = async () => {
-    const res = unwrapData(await api.pick_folder());
-    const path = res?.path || res?.data?.path;
-    if (path) document.getElementById("lgRoot").value = path;
+    try {
+      const res = unwrapData(await api.pick_folder());
+      if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
+      const path = res?.path || null;
+      if (path) document.getElementById("lgRoot").value = path;
+      else setStatus("Aucun dossier choisi.");
+    } catch (e) {
+      setStatus(String(e.message || e), "error");
+    }
   };
 
   document.getElementById("lgGo").onclick = async () => {
@@ -1677,9 +1810,15 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
     </div>`;
 
   document.getElementById("emPick").onclick = async () => {
-    const res = unwrapData(await api.pick_folder());
-    const path = res?.path || res?.data?.path;
-    if (path) document.getElementById("emRoot").value = path;
+    try {
+      const res = unwrapData(await api.pick_folder());
+      if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
+      const path = res?.path || null;
+      if (path) document.getElementById("emRoot").value = path;
+      else setStatus("Aucun dossier choisi.");
+    } catch (e) {
+      setStatus(String(e.message || e), "error");
+    }
   };
 
   document.getElementById("emGo").onclick = async () => {
@@ -1734,9 +1873,15 @@ async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
     </div>`;
 
   document.getElementById("duPick").onclick = async () => {
-    const res = unwrapData(await api.pick_folder());
-    const path = res?.path || res?.data?.path;
-    if (path) document.getElementById("duRoot").value = path;
+    try {
+      const res = unwrapData(await api.pick_folder());
+      if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
+      const path = res?.path || null;
+      if (path) document.getElementById("duRoot").value = path;
+      else setStatus("Aucun dossier choisi.");
+    } catch (e) {
+      setStatus(String(e.message || e), "error");
+    }
   };
 
   document.getElementById("duGo").onclick = async () => {
