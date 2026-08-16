@@ -29,6 +29,7 @@ from security import (  # noqa: E402
 )
 from suite_launch import launch_suite_app, resolve_suite_accent, resolve_suite_language  # noqa: E402
 from window_chrome import WindowChromeMixin  # noqa: E402
+import hub_update  # noqa: E402
 
 from tools.sysinspect import driver_view as mod_drivers  # noqa: E402
 from tools.sysinspect import event_peek as mod_events  # noqa: E402
@@ -1255,6 +1256,8 @@ class SystemCleanApi(_GateMixin):
 
 
 HUB_TITLE = "PC Command | System"
+HUB_ID = "systeme"
+_HUB_ROOT = _BACKEND.parent
 
 
 class DashboardApi:
@@ -1428,6 +1431,24 @@ class Api(WindowChromeMixin):
             return {"ok": True, "title": title}
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "error": str(exc)}
+
+    def get_app_version(self) -> dict:
+        ver = hub_update.get_local_suite_version(_HUB_ROOT)
+        return {
+            "ok": True,
+            "version": ver,
+            "hubId": HUB_ID,
+            "title": hub_update.title_with_version(HUB_TITLE, ver),
+        }
+
+    def check_for_update(self) -> dict:
+        return hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
+
+    def open_update(self) -> dict:
+        info = hub_update.check_hub_update(HUB_ID, _HUB_ROOT)
+        return hub_update.open_update_action(
+            _HUB_ROOT, release_url=info.get("releaseUrl")
+        )
 
     def open_suite_app(self, name: str) -> dict:
         return launch_suite_app(name)
