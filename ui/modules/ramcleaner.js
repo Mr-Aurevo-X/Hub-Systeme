@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+ */
+/**
  * RamCleaner — native in-hub (Lab/Ram Cleaner SoT parity).
  * Bridge: pywebview.api.ramcleaner.*
  * ConfirmGate on ALL mutators (kill_selected / trim_selected).

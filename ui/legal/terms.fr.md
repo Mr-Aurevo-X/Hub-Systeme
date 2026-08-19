@@ -1,31 +1,43 @@
-Conditions générales d’utilisation — Suite Mr-Aurevo-X (Atelier)
-Éditeur : Mr-Aurevo-X
-Produit d’entrée : Atelier (Atelier)
+# Conditions générales d’utilisation — PC Command / Suite Mr-Aurevo-X
 
-1. Périmètre
-Les présentes CGU s’appliquent à Atelier et à **tous les outils de la Suite Mr-Aurevo-X** disponibles via Atelier (installés localement ou fournis avec la Suite), y compris ceux ajoutés ultérieurement au catalogue tant qu’ils portent la marque Mr-Aurevo-X. Chaque outil peut afficher un copyright local ; le détail légal (CGU, confidentialité, mentions, licences) est **centralisé dans Atelier → À propos**.
+Éditeur : Mr-Aurevo-X  
+Produit : PC Command  
+Copyright (c) 2026 Mr-Aurevo-X. Tous droits réservés.
 
-2. Gratuité — pas d’engagement de mises à jour
-La Suite est fournie **100 % gratuitement**. Aucun abonnement, aucun paiement requis pour l’usage prévu. Il n’y a **aucune mise à jour automatique**. L’éditeur **ne s’engage pas** à publier des versions futures, corrections ou nouvelles fonctionnalités. Toute copie éventuelle ultérieure est fournie manuellement, sans obligation.
+Les présentes CGU s’appliquent aux hubs **PC Command**, à Install-Easy, aux standalones et aux apps vitrine sous marque Mr-Aurevo-X. Le fichier anglais `LICENSE` (PolyForm Noncommercial 1.0.0) est la licence. Ce document ajoute les règles d’usage. Ce n’est pas une seconde licence.
 
-3. Licence d’usage
-Usage personnel ou professionnel autorisé sur vos machines. Les logiciels restent **100 % gratuits**.
-La distribution binaire officielle passe **uniquement** par Install-Easy et/ou le canal Releases `MrAurevoX-Launcher` (github.com/Mr-Aurevo-X/MrAurevoX-Launcher).
-Sans accord écrit préalable de Mr-Aurevo-X sont interdits : fork ou republication des sources comme projet concurrent / de substitution ; redistribution hors canal officiel ; revente ; rebrand ; reverse engineering agressif ; suppression des mentions © / disclaimers / textes À propos.
-Le texte complet figure dans `LICENSE` / `LICENSE.fr.md` du kit LegalHelpers.
+## 1. Licence
 
-4. Responsabilité (générale)
-Les logiciels sont fournis « en l’état ». Vous êtes responsable des actions lancées. Un point de restauration / une sauvegarde est recommandé avant toute opération sensible. Mr-Aurevo-X ne pourra être tenu responsable des pertes de données ou dommages indirects dans les limites autorisées par la loi.
+Usage **non commercial** gratuit selon `LICENSE`. Revente, encapsulage payant, SaaS payant ou sous-licence : interdits sans accord écrit séparé.
 
-5. Nuances selon les outils
-Certains outils ont un impact système ou traitent des données sensibles **uniquement en local** :
-- Administration / système (ex. processus, services, démarrage, variables d’environnement, nettoyage, désinstallation, points de restauration) : peuvent modifier Windows ; confirmez toujours les actions.
-- Réseau / sécurité locale (ex. hosts, pare-feu, clés Wi‑Fi, cartographie) : peuvent affecter la connectivité ou afficher des secrets déjà présents sur le PC.
-- Fichiers (ex. PDF, images, recherche, corbeille) : agissent sur les fichiers que vous désignez.
-Le niveau d’expérience dans Atelier (Débutant → Développeur) masque progressivement les outils plus risqués ; le mode Développeur affiche tout le catalogue.
+Binaires officiels : Install-Easy et/ou Releases GitHub `Mr-Aurevo-X/MrAurevoX-Launcher` (`Launch-Hub-*.zip` par hub).
 
-6. Absence de garantie
-Aucune garantie de résultat, de disponibilité continue ou d’absence de bugs.
+Conserver les mentions de copyright et en-têtes source. Ne pas retirer les textes À propos / légaux.
 
-7. Droit applicable
-Droit français. Litiges : tribunaux compétents du siège de l’éditeur, sous réserve des règles d’ordre public.
+## 2. Aucune mise à jour garantie
+
+Le logiciel est livré comme un ensemble **autonome et fonctionnel**. L’éditeur n’a **aucune obligation** de fournir des versions futures, correctifs, adaptations OS ou maintenance. Pas de mise à jour automatique. Les contrôles GitHub éventuels sont déclenchés par l’utilisateur.
+
+## 3. « En l’état » / « selon disponibilité »
+
+LE LOGICIEL EST FOURNI **EN L’ÉTAT** ET **SELON DISPONIBILITÉ**, SANS GARANTIE D’AUCUNE SORTE.
+
+Vous assumez **100 %** du risque lié à l’exécution, la configuration, l’hébergement et l’isolation. Si un tiers modifie le logiciel et redistribue une version cassée ou nuisible, Mr-Aurevo-X n’est pas responsable de ce fork, de cet hébergement, ni de cet usage.
+
+## 4. Responsabilité de l’utilisateur
+
+ConfirmGate protège les actions destructives ; vous les confirmez. Point de restauration / sauvegarde recommandé. Les outils réseau contactent les **cibles que vous saisissez**. Traduction / réputation optionnelles : données vers des tiers (voir `PRIVACY.md`).
+
+Windows peut afficher « potentiellement dangereux » ou « Windows a protégé votre ordinateur » : les binaires officiels ne sont pas signés Authenticode (pas de certificat éditeur payant). C’est un avertissement de réputation SmartScreen, pas un verdict antivirus. Voir `ISOLATION.md`.
+
+## 5. Soutien facultatif
+
+Liens Discord, PayPal, Revolut : **volontaires**. Un don n’est pas un prix de licence et n’achète ni support ni mises à jour. Un clic quitte l’application locale.
+
+## 6. Inner-source fermé
+
+Les dépôts publics sont des **distributions en lecture seule**. Pas de PR, pas d’issues, pas de contributions externes (`CONTRIBUTING.md`).
+
+## 7. Droit applicable
+
+Droit français. Litiges : tribunaux compétents du domicile de l’éditeur, sous réserve des règles d’ordre public.

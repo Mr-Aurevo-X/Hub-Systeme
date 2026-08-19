@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
 #Requires -Version 5.1
 # Traces.ps1 - Liste des artefacts "ce que Windows garde" (onglet Traces)
 # Dépend : Cleanup.Categories, Core (Format-WinCleanSize)

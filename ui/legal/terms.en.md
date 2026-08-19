@@ -1,31 +1,43 @@
-Terms of Use — Mr-Aurevo-X Suite (Atelier)
-Publisher: Mr-Aurevo-X
-Entry product: Atelier (Atelier)
+# Terms of Use — PC Command / Mr-Aurevo-X Suite
 
-1. Scope
-These terms apply to Atelier and to **all Mr-Aurevo-X Suite tools** available through Atelier (locally installed or shipped with the Suite), including tools added later to the catalog while branded Mr-Aurevo-X. Each tool may show a local copyright; full legal text (Terms, Privacy, Legal notice, Licenses) is **centralized in Atelier → About**.
+Publisher: Mr-Aurevo-X  
+Product: PC Command  
+Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
 
-2. Free of charge — no update commitment
-The Suite is provided **100% free**. No subscription or payment is required for intended use. There is **no automatic update**. The publisher **does not commit** to future versions, fixes, or features. Any later copy is provided manually, with no obligation.
+These terms apply to **PC Command** hubs, Install-Easy, standalones, and showcase apps branded Mr-Aurevo-X. In-app About panels show the same kit. The English `LICENSE` (PolyForm Noncommercial 1.0.0) is the license grant. These terms add operational rules. They are not a second license.
 
-3. License
-Personal or professional use on your machines is allowed. The software remains **100% free of charge**.
-Official binary distribution is **only** through Install-Easy and/or the `MrAurevoX-Launcher` Releases channel (github.com/Mr-Aurevo-X/MrAurevoX-Launcher).
-Without prior written consent from Mr-Aurevo-X, the following are forbidden: forking or republishing source as a competing / substitute project; redistribution outside the official channel; resale; rebranding; aggressive reverse engineering; removal of © markers / disclaimers / About text.
-The full text is in LegalHelpers `LICENSE` / `LICENSE.fr.md`.
+## 1. License
 
-4. Responsibility (general)
-Software is provided “as is”. You are responsible for actions you run. A restore point / backup is recommended before sensitive operations. Mr-Aurevo-X is not liable for data loss or indirect damages to the extent permitted by law.
+Use is free for **non-commercial** purposes under `LICENSE`. Commercial resale, paid wrapping, paid SaaS, or sublicensing requires a separate written agreement.
 
-5. Tool-specific nuances
-Some tools have system impact or handle sensitive data **locally only**:
-- Admin / system (e.g. processes, services, startup, environment, cleanup, uninstall, restore points): may change Windows; always confirm actions.
-- Network / local security (e.g. hosts, firewall, Wi‑Fi keys, mapping): may affect connectivity or reveal secrets already on the PC.
-- Files (e.g. PDF, images, search, recycle bin): act on paths you choose.
-Atelier’s experience level (Beginner → Developer) progressively hides riskier tools; Developer mode shows the full catalog.
+Official binaries: Install-Easy and/or GitHub Releases `Mr-Aurevo-X/MrAurevoX-Launcher` (`Launch-Hub-*.zip` per hub).
 
-6. No warranty
-No warranty of results, continuous availability, or freedom from bugs.
+You must keep copyright notices and source headers. You must not strip About / legal text.
 
-7. Governing law
-French law. Disputes: competent courts of the publisher’s seat, subject to mandatory rules.
+## 2. No updates guaranteed
+
+The software is delivered as a finished, standalone build. The publisher has **no obligation** to provide future versions, patches, OS compatibility fixes, or long-term maintenance. There is no automatic update commitment. Optional GitHub update checks are user-initiated.
+
+## 3. As-is / as-available — total disclaimer
+
+THE SOFTWARE IS PROVIDED **AS IS** AND **AS AVAILABLE**, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+You assume **100%** of the risk for how you run, configure, host, isolate, and operate the program, including on modified forks. If a third party alters the software and redistributes a broken or harmful version, Mr-Aurevo-X is not liable for that fork, that hosting, or that use.
+
+## 4. User responsibility
+
+ConfirmGate protects destructive system actions; you still confirm them. Take a restore point / backup before sensitive operations. Network tools contact **targets you enter**. Optional reputation / translation features send data to third parties you opt into (see `PRIVACY.md`).
+
+Windows may flag the app as potentially unsafe: binaries are not Authenticode-signed (no paid publisher certificate). That is a SmartScreen reputation warning, not an antivirus verdict. See `ISOLATION.md`.
+
+## 5. Optional support
+
+Discord, PayPal, and Revolut links are **voluntary**. Donations are not a license fee and do not buy support, updates, or extra rights. Clicking those links leaves the local app.
+
+## 6. Closed inner-source
+
+Public repositories are **read-only distributions**. Pull requests, issues, and external contributions are not accepted (`CONTRIBUTING.md`).
+
+## 7. Governing law
+
+French law. Disputes: competent courts of the publisher’s domicile, subject to mandatory consumer rules.

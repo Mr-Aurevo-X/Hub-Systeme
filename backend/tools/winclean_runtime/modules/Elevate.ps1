@@ -1,4 +1,8 @@
-﻿#Requires -Version 5.1
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
+#Requires -Version 5.1
 # Elevate.ps1 - Relance le script en admin si nécessaire
 
 function Test-WinCleanAdmin {

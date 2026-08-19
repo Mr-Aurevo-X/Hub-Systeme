@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+ * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+ * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+ */
+/**
  * SystemClean — native in-hub (WinCleaner + DiskMap), no iframe.
  * Bridge: pywebview.api.systemclean.wincleaner.* / systemclean.diskmap.*
  */

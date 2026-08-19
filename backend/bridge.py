@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
 """Hub-Systeme namespace APIs — Couche B H4 (in-process)."""
 from __future__ import annotations
 
@@ -1449,6 +1453,9 @@ class Api(WindowChromeMixin):
         return hub_update.open_update_action(
             _HUB_ROOT, release_url=info.get("releaseUrl")
         )
+
+    def open_support_url(self, kind: str = "") -> dict:
+        return hub_update.open_support_url(kind)
 
     def apply_update(self, force: bool = False) -> dict:
         """Download + replace Launch-Hub zip in-place (LOCALAPPDATA install)."""

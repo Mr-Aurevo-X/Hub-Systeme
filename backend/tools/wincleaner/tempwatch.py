@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
 """TempWatch — size of common temp folders."""
 from __future__ import annotations
 import os

@@ -1,6 +1,13 @@
-﻿# Hub-Systeme — L'Atelier PC Command
+﻿[Français](README.md) · [English](README.en.md)
 
-Hub catégorie **Système** — Couche B + H7 native + flatten `host.py` / `backend/`.
+# Hub-Systeme — PC Command
+
+Distribution **lecture seule**. Pas de pull requests ni d’issues (`CONTRIBUTING.md`).
+
+Hub catégorie **Système** — Dashboard + modules natifs (`host.py` / `backend/`).  
+Licence : PolyForm Noncommercial 1.0.0. Éditeur : **Mr-Aurevo-X**.
+
+Architecture **local-first** (Python + WebView2). Pas de télémétrie éditeur. Les mises à jour GitHub sont optionnelles (voir `PRIVACY.md`).
 
 ## Aperçu
 
@@ -17,9 +24,9 @@ Hub catégorie **Système** — Couche B + H7 native + flatten `host.py` / `back
 | ProcessHub | ProcessGuard · StartupX | kill_process · empty_working_set · service_action · set_task_enabled · create_at_logon |
 | UninstX | UninstX | uninstall_app |
 | SysInspect | SysInspect | — (lecture seule) |
-| Admin léger | PowerPlan · PrintQueue · RestorePoint · UserSessions | set_plan · purge_printer_jobs · create_restore_point · logoff_session (+ nested `api.admin.*`) |
+| Admin léger | PowerPlan · PrintQueue · RestorePoint · UserSessions | set_plan · purge_printer_jobs · create_restore_point · logoff_session |
 
-Dashboard = KPIs lecture seule (disque / RAM / process). Fallback « Fenêtre dédiée » via `suite_launch`.
+Dashboard = KPIs lecture seule. Isolation : `ISOLATION.md`. Canaux : `RELEASES.md`.
 
 ## Lancer
 
@@ -27,33 +34,16 @@ Dashboard = KPIs lecture seule (disque / RAM / process). Fallback « Fenêtre d�
 Lancer.cmd
 ```
 
-Nécessite Python + `pywebview` + `psutil` (Admin hérité du launcher PC Command ; UAC aussi dans `main()`).
+Windows peut afficher « potentiellement dangereux » : les binaires ne sont pas signés Authenticode (pas de certificat éditeur payant). C’est un avertissement de réputation SmartScreen, pas un verdict antivirus.
 
-## Structure
+Python pin + `pywebview` + `psutil` (Admin hérité du launcher PC Command).
 
-```text
-host.py                 # entry + UAC + webview
-backend/
-  bridge.py             # Api + namespaces (systemclean, processhub, …)
-  security.py           # ConfirmGate (SecurityHelpers)
-  window_chrome.py      # vendored HostHelpers
-  suite_launch.py       # vendored HostHelpers
-  tools/                # logique métier (wincleaner, diskmap, processguard, …)
-ui/index.html           # shell + sidebar
-ui/app.js               # navigation + lazy modules + titres Atelier
-ui/_hub_util.js         # helpers JS natifs (pas d’iframe)
-ui/dashboard.js         # home KPIs
-ui/modules/*.js         # UIs Couche B / H7
-```
+Titres HWND : `PC Command | System` / `[Module]`.
 
-Titres HWND : `PC Command | System` / `[Module|Segment]` (ex. `[RamCleaner]`).
+---
 
+Rêvée par **Mr-Aurevo-X**. Cursor a réalisé le rêve.
 
-## Soutien
-
-Coups de pouce volontaires (PC Command reste gratuit) :
-
+[![Discord](https://img.shields.io/badge/Discord-Mr--Aurevo--X-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=050807)](https://discord.com/users/406891052516114442)
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-39ff14?style=for-the-badge&logo=paypal&logoColor=00f0ff&labelColor=050807)](https://www.paypal.com/paypalme/aurevo1)
 [![Revolut](https://img.shields.io/badge/Revolut-mr__aurevo__x-00f0ff?style=for-the-badge&logo=revolut&logoColor=39ff14&labelColor=050807)](https://revolut.me/mr_aurevo_x)
-
-SoT runtime = `backend/tools/` (in-hub native). Standalone tool repos archived â€” hub-only distribution.

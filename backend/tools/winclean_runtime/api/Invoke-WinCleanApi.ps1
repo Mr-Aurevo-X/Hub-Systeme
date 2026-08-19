@@ -1,4 +1,8 @@
-﻿#Requires -Version 5.1
+# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
+
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   Pont JSON WinClean — lit une requête, appelle les modules, écrit une réponse.
