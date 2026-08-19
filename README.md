@@ -41,3 +41,5 @@ ui/modules/*.js         # UIs Couche B / H7
 ```
 
 Titres HWND : `PC Command | System` / `[Module|Segment]` (ex. `[RamCleaner]`).
+
+`_source_apps/` = clones référence des anciennes mini-apps (non shippés). SoT runtime = `backend/tools/`.

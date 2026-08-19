@@ -534,6 +534,21 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
 
   const catsEl = document.getElementById("trCats");
   const resultEl = document.getElementById("trResult");
+  const scanBtn = document.getElementById("trScan");
+  const clearBtn = document.getElementById("trClear");
+
+  function setTraceBusy(busy) {
+    if (scanBtn) scanBtn.disabled = !!busy;
+    if (clearBtn) clearBtn.disabled = !!busy;
+  }
+
+  function showTraceSkeleton() {
+    resultEl.innerHTML = `<div aria-busy="true">
+      <div class="hub-skel" style="height:14px;margin:8px 0"></div>
+      <div class="hub-skel" style="height:14px;margin:8px 0;width:86%"></div>
+      <div class="hub-skel" style="height:14px;margin:8px 0;width:72%"></div>
+    </div>`;
+  }
 
   function selectedTraceIds() {
     return [...catsEl.querySelectorAll("input[type=checkbox]:checked")].map((el) => el.value);
@@ -653,6 +668,8 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
     }
     setStatus("Liste des traces…");
     if (setProgress) setProgress(15, "Traces…");
+    setTraceBusy(true);
+    showTraceSkeleton();
     try {
       const res = await runSync(api, "listTraces", { ids });
       const data = res.data != null ? res.data : res;
@@ -661,6 +678,7 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
     } catch (e) {
       setStatus(String(e.message || e), "error");
     } finally {
+      setTraceBusy(false);
       if (setProgress) setTimeout(() => setProgress(0, ""), 500);
     }
   }
@@ -685,24 +703,29 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
       );
       if (!strong) return;
     }
-    const res = await runJob(
-      api,
-      "runClean",
-      { ids, TracesOnly: true },
-      null,
-      null,
-      setProgress
-    );
-    if (!res?.ok) {
-      setStatus(res?.error || "Échec", "error");
+    setTraceBusy(true);
+    try {
+      const res = await runJob(
+        api,
+        "runClean",
+        { ids, TracesOnly: true },
+        null,
+        null,
+        setProgress
+      );
+      if (!res?.ok) {
+        setStatus(res?.error || "Échec", "error");
+        if (setProgress) setTimeout(() => setProgress(0, ""), 600);
+        return;
+      }
+      const data = res.data || res;
+      const freed =
+        data.FreedText || data.freedText || (data.FreedBytes != null ? fmtBytes(data.FreedBytes) : "");
+      setStatus(freed ? `Traces effacées — ${freed}` : "Traces effacées.", "ok");
       if (setProgress) setTimeout(() => setProgress(0, ""), 600);
-      return;
+    } finally {
+      setTraceBusy(false);
     }
-    const data = res.data || res;
-    const freed =
-      data.FreedText || data.freedText || (data.FreedBytes != null ? fmtBytes(data.FreedBytes) : "");
-    setStatus(freed ? `Traces effacées — ${freed}` : "Traces effacées.", "ok");
-    if (setProgress) setTimeout(() => setProgress(0, ""), 600);
     await listTraces();
   };
 

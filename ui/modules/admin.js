@@ -225,10 +225,18 @@ export async function mount(root) {
             const pct = b.chargePercent != null ? `${b.chargePercent}%` : "—";
             const st = b.statusLabelFr || b.statusLabelEn || b.status || "—";
             const name = b.name || "Batterie";
+            const design = Number(b.designCapacity);
+            const full = Number(b.fullChargeCapacity);
+            let capLine = "";
+            if (Number.isFinite(design) && design > 0 && Number.isFinite(full) && full > 0) {
+              const z = Math.round((full / design) * 100);
+              capLine = `<p style="font-size:0.84rem;margin:2px 0">Capacité : <strong>${esc(String(full))} mWh / ${esc(String(design))} mWh design (~${z}%)</strong></p>`;
+            }
             return `<div style="margin-bottom:8px">
               <p style="font-size:0.84rem;margin:2px 0"><strong>${esc(name)}</strong></p>
               <p style="font-size:0.84rem;margin:2px 0">Charge : <strong>${esc(pct)}</strong></p>
               <p style="font-size:0.84rem;margin:2px 0">État : <strong>${esc(String(st))}</strong></p>
+              ${capLine}
             </div>`;
           })
           .join("");
@@ -297,7 +305,9 @@ export async function mount(root) {
         )}</strong></p>`;
         focusBtns.hidden = false;
         focusBtns.querySelectorAll("[data-mode]").forEach((b) => {
-          b.classList.toggle("accent", b.getAttribute("data-mode") === key);
+          const on = b.getAttribute("data-mode") === key;
+          b.classList.toggle("accent", on);
+          b.classList.toggle("active", on);
         });
       } catch {
         focusInfo.textContent = "Focus Assist non disponible.";
