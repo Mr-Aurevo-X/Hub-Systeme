@@ -7,7 +7,7 @@
 **System** hub — Dashboard + native modules (`host.py` / `backend/`).  
 License: PolyForm Noncommercial 1.0.0. Publisher: **Mr-Aurevo-X**.
 
-**Local-first** (Python + WebView2). No publisher telemetry. GitHub updates are optional (`PRIVACY.md`).
+**Local-first** (Python + WebView2). No publisher telemetry. No in-app automatic updater (`PRIVACY.md`).
 
 ## Overview
 

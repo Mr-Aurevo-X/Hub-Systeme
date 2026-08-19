@@ -7,7 +7,7 @@ Distribution **lecture seule**. Pas de pull requests ni d’issues (`CONTRIBUTIN
 Hub catégorie **Système** — Dashboard + modules natifs (`host.py` / `backend/`).  
 Licence : PolyForm Noncommercial 1.0.0. Éditeur : **Mr-Aurevo-X**.
 
-Architecture **local-first** (Python + WebView2). Pas de télémétrie éditeur. Les mises à jour GitHub sont optionnelles (voir `PRIVACY.md`).
+Architecture **local-first** (Python + WebView2). Pas de télémétrie éditeur. Pas de mise à jour automatique in-app (voir `PRIVACY.md`).
 
 ## Aperçu
 
