@@ -2,6 +2,12 @@
 
 Hub catégorie **Système** — Couche B + H7 native + flatten `host.py` / `backend/`.
 
+## Aperçu
+
+| Accueil | Module |
+|---------|--------|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![SystemClean](docs/screenshots/systemclean.png) |
+
 ## Modules
 
 | Module | Source fusionnée | ConfirmGate |

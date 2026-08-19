@@ -287,6 +287,8 @@ async function boot() {
   await waitApi();
   await loadVersionAndUpdates();
   await showView("dashboard");
+  const bootView = (location.hash || "").replace(/^#/, "").trim();
+  if (bootView && bootView !== "dashboard") await showView(bootView);
 }
 
 if (document.readyState === "loading") {
