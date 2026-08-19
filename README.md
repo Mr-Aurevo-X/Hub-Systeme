@@ -49,3 +49,10 @@ ui/modules/*.js         # UIs Couche B / H7
 Titres HWND : `PC Command | System` / `[Module|Segment]` (ex. `[RamCleaner]`).
 
 `_source_apps/` = clones référence des anciennes mini-apps (non shippés). SoT runtime = `backend/tools/`.
+
+## Soutien
+
+Coups de pouce volontaires (PC Command reste gratuit) :
+
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-39ff14?style=for-the-badge&logo=paypal&logoColor=00f0ff&labelColor=050807)](https://www.paypal.com/paypalme/aurevo1)
+[![Revolut](https://img.shields.io/badge/Revolut-mr__aurevo__x-00f0ff?style=for-the-badge&logo=revolut&logoColor=39ff14&labelColor=050807)](https://revolut.me/mr_aurevo_x)

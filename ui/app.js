@@ -224,7 +224,7 @@ async function loadVersionAndUpdates() {
           u.autoUpdate !== false &&
           typeof a.apply_update === "function"
         );
-        if (silent) await runHubApply(false);
+        if (silent) void runHubApply(false);
         else showUpdateBanner(u, { silent: false });
       }
     }
@@ -285,10 +285,10 @@ function wireSidebar() {
 async function boot() {
   wireSidebar();
   await waitApi();
-  await loadVersionAndUpdates();
   await showView("dashboard");
   const bootView = (location.hash || "").replace(/^#/, "").trim();
   if (bootView && bootView !== "dashboard") await showView(bootView);
+  void loadVersionAndUpdates();
 }
 
 if (document.readyState === "loading") {
