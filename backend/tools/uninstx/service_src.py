@@ -352,7 +352,7 @@ def main() -> None:
 
     api = Api()
     create_tool_window(
-        title="UninstX — L'Atelier PC Command",
+        title="UninstX — PC Command | System",
         url=index.as_uri(),
         js_api=api,
         background_color='#06070c',
