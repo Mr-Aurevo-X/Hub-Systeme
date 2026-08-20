@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
  * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
-/* RamCleaner — native in-hub (Lab SoT parity) */
+/* RamCleaner â€” native in-hub (Lab SoT parity) */
 
 .hub-ramcleaner {
   display: flex;
@@ -211,13 +211,13 @@
 }
 
 .hub-ramcleaner .confirm-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 100001;
+  background: rgba(7, 7, 8, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
 }
 

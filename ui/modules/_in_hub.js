@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
  * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
 /**
- * Shared UninstX-grade in-hub helpers — native DOM only (no iframe).
+ * Shared UninstX-grade in-hub helpers â€” native DOM only (no iframe).
  */
 import { apiNs, esc } from "../_hub_util.js";
 
@@ -171,6 +171,7 @@ export function mountModuleShell(root, opts) {
     confirmTitle.textContent = titleText;
     confirmMsg.textContent = message;
     confirmOverlay.hidden = false;
+    document.body.classList.add('pcd-confirm-open');
     return new Promise((resolve) => {
       confirmResolver = resolve;
     });
@@ -178,6 +179,7 @@ export function mountModuleShell(root, opts) {
 
   function closeConfirm(ok) {
     confirmOverlay.hidden = true;
+    document.body.classList.remove('pcd-confirm-open');
     if (confirmResolver) {
       const r = confirmResolver;
       confirmResolver = null;
