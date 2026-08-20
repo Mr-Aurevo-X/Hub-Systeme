@@ -512,7 +512,12 @@ export async function mount(root) {
       );
       if (!ok) return;
       try {
-        const res = await api.toggle_startup_item(item);
+        const prep = await api.prepare_toggle_startup_item({ ...item, enable });
+        if (!prep?.ok || !prep?.token) {
+          setStatus("Préparation échouée : " + (prep?.error || "?"), "error");
+          return;
+        }
+        const res = await api.toggle_startup_item({ ...item, enable }, prep.token);
         if (res?.ok) {
           setStatus(`Entrée « ${item.name} » ${enable ? "activée" : "désactivée"}.`, "ok");
           await loadStartup();

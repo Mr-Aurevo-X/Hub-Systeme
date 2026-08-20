@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
+﻿# Copyright (c) 2026 Mr-Aurevo-X. All rights reserved.
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
 
@@ -143,6 +143,12 @@ class _GateMixin:
             return {"ok": False, "error": str(exc), "token": None}
 
     def _consume(self, action: str, payload: dict | None, token: str | None) -> dict | None:
+        if not token:
+            return {
+                "ok": False,
+                "error": "Confirmation requise",
+                "need_confirm": True,
+            }
         if not self._confirm.consume(str(token or ""), action, payload or {}):
             return {"ok": False, "error": "Jeton de confirmation invalide ou expire"}
         return None
@@ -530,16 +536,19 @@ $used = $total - $free
             "task_path": str(task_path or "").strip(),
             "enabled": bool(enabled),
         }
-        # Original StartupX UI may omit token after window.confirm — mint+consume.
-        if not token:
-            try:
-                token = self._confirm.prepare("set_task_enabled", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_task_enabled", payload, token)
         if denied is not None:
             return denied
         return mod_cron.set_task_enabled(task_name, task_path, enabled)
+
+    def prepare_toggle_startup_item(self, item: dict | None = None) -> dict:
+        if not isinstance(item, dict):
+            return {"ok": False, "error": "Item invalide", "token": None}
+        payload = {"item": item}
+        try:
+            return {"ok": True, "token": self._confirm.prepare("toggle_startup_item", payload)}
+        except ValueError as exc:
+            return {"ok": False, "error": str(exc), "token": None}
 
     def prepare_create_at_logon(
         self, task_name: str, program: str, arguments: str = ""
@@ -668,11 +677,6 @@ $used = $total - $free
         if not isinstance(item, dict):
             return {"ok": False, "error": "Item invalide"}
         payload = {"item": item}
-        if not token:
-            try:
-                token = self._confirm.prepare("toggle_startup_item", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("toggle_startup_item", payload, token)
         if denied is not None:
             return denied
@@ -825,11 +829,6 @@ class PowerPlanApi(_GateMixin):
         if not re.fullmatch(r"[0-9a-fA-F-]{36}", guid_s):
             return {"ok": False, "error": "GUID invalide"}
         payload = {"guid": guid_s}
-        if not token:
-            try:
-                token = self._confirm.prepare("set_plan", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_plan", payload, token)
         if denied is not None:
             return denied
@@ -855,11 +854,6 @@ class PowerPlanApi(_GateMixin):
         except (TypeError, ValueError):
             return {"ok": False, "error": "mode invalide"}
         payload = {"mode": mode_i}
-        if not token:
-            try:
-                token = self._confirm.prepare("set_focus_assist", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("set_focus_assist", payload, token)
         if denied is not None:
             return denied
@@ -936,11 +930,6 @@ foreach ($p in Get-Printer -ErrorAction SilentlyContinue) {
         if not name:
             return {"ok": False, "error": "Nom d'imprimante requis"}
         payload = {"printer_name": name}
-        if not token:
-            try:
-                token = self._confirm.prepare("purge_printer_jobs", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("purge_printer_jobs", payload, token)
         if denied is not None:
             return denied
@@ -1009,11 +998,6 @@ $rows | ConvertTo-Json -Compress -Depth 3
             return {"ok": False, "error": "Administrateur requis", "admin": False}
         desc = (description or "").strip() or "Mr-Aurevo-X RestorePoint"
         payload = {"description": desc}
-        if not token:
-            try:
-                token = self._confirm.prepare("create_restore_point", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("create_restore_point", payload, token)
         if denied is not None:
             return denied
@@ -1114,11 +1098,6 @@ if (-not $rows.Count) {
         if sid <= 0:
             return {"ok": False, "error": "ID de session invalide"}
         payload = {"session_id": sid}
-        if not token:
-            try:
-                token = self._confirm.prepare("logoff_session", payload)
-            except ValueError as exc:
-                return {"ok": False, "error": str(exc)}
         denied = self._consume("logoff_session", payload, token)
         if denied is not None:
             return denied
