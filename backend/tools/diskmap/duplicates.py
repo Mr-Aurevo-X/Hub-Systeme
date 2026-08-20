@@ -12,6 +12,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
+from .bigfiles import _path_forbidden
+
 _MAX_FILES = 3000
 _CHUNK = 1024 * 1024
 
@@ -139,6 +141,9 @@ def _ps_single_quote(value: str) -> str:
 
 
 def trash_one(path: Path) -> tuple[bool, str | None]:
+    forbidden = _path_forbidden(path)
+    if forbidden:
+        return False, forbidden
     if not path.exists():
         return False, "Chemin introuvable"
     method = "DeleteDirectory" if path.is_dir() else "DeleteFile"
