@@ -28,6 +28,17 @@ Architecture **local-first** (Python + WebView2). Pas de télémétrie éditeur.
 
 Dashboard = KPIs lecture seule. Isolation : `ISOLATION.md`. Canaux : `RELEASES.md`.
 
+## Où s’installe
+
+| Mode | Emplacement |
+|------|-------------|
+| **Release** (`Launch-Hub-Systeme.zip`) | Dossier **portable** : extrayez le zip où vous voulez, lancez `Launch-Hub-Systeme.exe` depuis ce dossier (gardez le contenu du zip ensemble). |
+| **Métadonnées / version** | `%LOCALAPPDATA%\PCCommand\` (ex. `version.json` partagé PC Command) |
+| **Préférences accent / langue** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (si présent) |
+| **Dev (sources)** | Clone du repo + `Lancer.cmd` — rien n’est copié ailleurs tant que vous ne déployez pas le zip |
+
+Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases).
+
 ## Lancer
 
 ```bat

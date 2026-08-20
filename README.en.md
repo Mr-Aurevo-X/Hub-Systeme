@@ -28,6 +28,17 @@ License: PolyForm Noncommercial 1.0.0. Publisher: **Mr-Aurevo-X**.
 
 Isolation: `ISOLATION.md`. Channels: `RELEASES.md`.
 
+## Where it installs
+
+| Mode | Location |
+|------|----------|
+| **Release** (`Launch-Hub-Systeme.zip`) | **Portable** folder: extract the zip anywhere, run `Launch-Hub-Systeme.exe` from that folder (keep zip contents together). |
+| **Version / stamp** | `%LOCALAPPDATA%\PCCommand\` (e.g. shared `version.json`) |
+| **Accent / language prefs** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (if present) |
+| **Dev (sources)** | Repo clone + `Lancer.cmd` — nothing else is copied until you deploy the zip |
+
+Download: [Hub-Systeme Releases](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases).
+
 ## Run
 
 ```bat
