@@ -1,9 +1,9 @@
 {
-  "suiteVersion": "v1.4.9",
-  "tag": "v1.4.9",
+  "suiteVersion": "v1.5.0",
+  "tag": "v1.5.0",
   "hub": "systeme",
   "repo": "Mr-Aurevo-X/Hub-Systeme",
   "packs": {
-    "hub-systeme": "v1.4.9"
+    "hub-systeme": "v1.5.0"
   }
 }
