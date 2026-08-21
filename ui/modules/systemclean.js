@@ -9,6 +9,7 @@
  * DiskMap is a separate sidebar module (modules/diskmap.js).
  */
 import { mountModuleShell, waitNs, esc, pollUntil } from "./_in_hub.js";
+import { t } from "../i18n.js";
 
 /** SoT WinCleaner TRACE_CAT_IDS — Screenshots off by default + ConfirmStrong. */
 const TRACE_CAT_IDS = [
@@ -21,21 +22,17 @@ const TRACE_CAT_IDS = [
   "Screenshots",
 ];
 
-const TRACE_CAT_FALLBACK = {
-  Recent: { label: "Fichiers récents", description: "Raccourcis Recent (.lnk)" },
-  JumpLists: { label: "Jump lists", description: "AutomaticDestinations / CustomDestinations" },
-  ExplorerHistory: {
-    label: "Historique Explorateur",
-    description: "RecentDocs, TypedPaths, WordWheel, RunMRU",
-  },
-  Thumbnails: { label: "Miniatures / icônes", description: "Thumbcache / IconCache" },
-  Prefetch: { label: "Prefetch", description: "C:\\Windows\\Prefetch" },
-  ClipboardHistory: { label: "Historique presse-papiers", description: "Cache local Clipboard (Win+V)" },
-  Screenshots: {
-    label: "Captures d'écran",
-    description: "Images\\Captures d'écran / Screenshots",
-  },
-};
+function traceCatFallback() {
+  return {
+    Recent: { label: t("scTraceRecent"), description: t("scTraceRecentDesc") },
+    JumpLists: { label: t("scTraceJumpLists"), description: t("scTraceJumpListsDesc") },
+    ExplorerHistory: { label: t("scTraceExplorerHistory"), description: t("scTraceExplorerHistoryDesc") },
+    Thumbnails: { label: t("scTraceThumbnails"), description: t("scTraceThumbnailsDesc") },
+    Prefetch: { label: t("scTracePrefetch"), description: t("scTracePrefetchDesc") },
+    ClipboardHistory: { label: t("scTraceClipboardHistory"), description: t("scTraceClipboardHistoryDesc") },
+    Screenshots: { label: t("scTraceScreenshots"), description: t("scTraceScreenshotsDesc") },
+  };
+}
 
 async function wcApi() {
   return waitNs("systemclean.wincleaner", "prepare_action");
@@ -43,8 +40,9 @@ async function wcApi() {
 
 
 /** Surface real backend / bridge errors (never swallow empty messages). */
-function apiErr(res, fallback = "Échec") {
-  if (res == null) return fallback + " (réponse vide)";
+function apiErr(res, fallback) {
+  const fb = fallback || t("commonFailed");
+  if (res == null) return `${fb} (${t("commonEmptyResponse")})`;
   if (typeof res === "string") return res;
   const nested = res.data && typeof res.data === "object" ? res.data : null;
   return (
@@ -52,14 +50,14 @@ function apiErr(res, fallback = "Échec") {
     nested?.error ||
     res.message ||
     nested?.message ||
-    (res.ok === false ? fallback : null) ||
-    fallback
+    (res.ok === false ? fb : null) ||
+    fb
   );
 }
 
 async function runSync(api, action, payload = {}) {
   if (!api || typeof api.run !== "function") {
-    throw new Error("API wincleaner.run indisponible (bridge)");
+    throw new Error(t("scRunApiUnavailable"));
   }
   let res;
   try {
@@ -68,7 +66,7 @@ async function runSync(api, action, payload = {}) {
     throw new Error(String(e?.message || e) || "Exception " + action);
   }
   if (!res || res.ok === false) {
-    throw new Error(apiErr(res, "Échec " + action));
+    throw new Error(apiErr(res, `${t("commonFailed")} ${action}`));
   }
   return res;
 }
@@ -87,24 +85,24 @@ function summarizeClean(data) {
     "";
   const delta = d.diskDelta || d.DiskDelta || d.delta || null;
   const parts = [];
-  if (before) parts.push("Avant / estimé : " + before);
-  if (freed) parts.push("Libéré : " + freed);
+  if (before) parts.push(t("scBeforeEstimated", { value: before }));
+  if (freed) parts.push(t("scFreed", { value: freed }));
   if (delta) {
-    let t = "";
+    let deltaText = "";
     if (typeof delta === "object") {
       const rows = delta.Rows || delta.rows || [];
       if (Array.isArray(rows) && rows.length) {
-        t = rows
+        deltaText = rows
           .map((r) => `${r.Name || r.name || "?"}: ${r.DeltaText || r.deltaText || ""}`)
           .filter(Boolean)
           .join(" · ");
       } else {
-        t = delta.Text || delta.text || "";
+        deltaText = delta.Text || delta.text || "";
       }
     } else {
-      t = String(delta);
+      deltaText = String(delta);
     }
-    if (t) parts.push("Disque : " + t);
+    if (deltaText) parts.push(t("scDiskDelta", { value: deltaText }));
   }
   return parts.join("\n");
 }
@@ -120,11 +118,11 @@ function stablePayload(payload) {
 
 async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress) {
   if (!api || typeof api.start_action !== "function") {
-    return { ok: false, error: "API wincleaner.start_action indisponible (bridge)" };
+    return { ok: false, error: t("scStartApiUnavailable") };
   }
   if (confirmMsg) {
-    const ok = await askConfirm(confirmMsg, "Confirmer l'action");
-    if (!ok) return { ok: false, error: "Annulé" };
+    const ok = await askConfirm(confirmMsg, t("commonConfirmAction"));
+    if (!ok) return { ok: false, error: t("commonCancelled") };
   }
   const pl = stablePayload(payload);
   let prep;
@@ -134,7 +132,7 @@ async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress)
     return { ok: false, error: "prepare_action: " + String(e?.message || e) };
   }
   if (!prep || !prep.ok || !prep.token) {
-    return { ok: false, error: apiErr(prep, "Confirmation refusée (ConfirmGate)") };
+    return { ok: false, error: apiErr(prep, t("scConfirmRefused")) };
   }
   let started;
   try {
@@ -143,7 +141,7 @@ async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress)
     return { ok: false, error: "start_action: " + String(e?.message || e) };
   }
   if (!started || !started.ok) {
-    return { ok: false, error: apiErr(started, "Démarrage refusé") };
+    return { ok: false, error: apiErr(started, t("scStartRefused")) };
   }
   const progress = await pollUntil(
     () => api.get_action_progress(),
@@ -162,10 +160,10 @@ async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress)
     try {
       if (typeof api.cancel_action === "function") await api.cancel_action();
     } catch (_) {}
-    return { ok: false, error: "Timeout — job annulé. Relancez l'action." };
+    return { ok: false, error: t("scJobTimeout") };
   }
   if (progress?.error && (progress.done || progress.ok === false)) {
-    return { ok: false, error: apiErr(progress, "Échec job") };
+    return { ok: false, error: apiErr(progress, t("scJobFailed")) };
   }
   let result;
   try {
@@ -174,17 +172,17 @@ async function runJob(api, action, payload, askConfirm, confirmMsg, setProgress)
     return { ok: false, error: "get_action_result: " + String(e?.message || e) };
   }
   if (!result || result.ok === false) {
-    return { ok: false, error: apiErr(result, "Aucun résultat"), data: result?.data };
+    return { ok: false, error: apiErr(result, t("commonNoResult")), data: result?.data };
   }
   return result;
 }
 
 function fmtBytes(n) {
   const b = Number(n) || 0;
-  if (b < 1024) return b + " o";
-  if (b < 1024 ** 2) return (b / 1024).toFixed(0) + " Ko";
-  if (b < 1024 ** 3) return (b / 1024 ** 2).toFixed(1) + " Mo";
-  return (b / 1024 ** 3).toFixed(2) + " Go";
+  if (b < 1024) return `${b} ${t("unitBytes")}`;
+  if (b < 1024 ** 2) return `${(b / 1024).toFixed(0)} ${t("unitKB")}`;
+  if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(1)} ${t("unitMB")}`;
+  return `${(b / 1024 ** 3).toFixed(2)} ${t("unitGB")}`;
 }
 
 
@@ -202,18 +200,18 @@ function scEl(body, id, alive) {
 
 export async function mount(root) {
   const ctx = mountModuleShell(root, {
-    title: "SystemClean",
-    subtitle: "WinCleaner — nettoyage, traces, debloat & santé · PC Command",
+    title: t("scTitle"),
+    subtitle: t("scSubtitle"),
     segments: [
-      { id: "wc-health", label: "Santé" },
-      { id: "wc-clean", label: "Nettoyage" },
-      { id: "wc-traces", label: "Traces" },
-      { id: "wc-debloat", label: "Debloat" },
-      { id: "wc-uninstall", label: "Désinstaller" },
-      { id: "wc-opt", label: "Optimisations" },
-      { id: "wc-sessions", label: "Sessions" },
-      { id: "wc-excl", label: "Exclusions" },
-      { id: "wc-tools", label: "Outils" },
+      { id: "wc-health", label: t("scSegHealth") },
+      { id: "wc-clean", label: t("scSegClean") },
+      { id: "wc-traces", label: t("scSegTraces") },
+      { id: "wc-debloat", label: t("scSegDebloat") },
+      { id: "wc-uninstall", label: t("scSegUninstall") },
+      { id: "wc-opt", label: t("scSegOpt") },
+      { id: "wc-sessions", label: t("scSegSessions") },
+      { id: "wc-excl", label: t("scSegExcl") },
+      { id: "wc-tools", label: t("scSegTools") },
     ],
     onSegment: (id, body) => renderSegment(id, body, ctx),
   });
@@ -225,14 +223,14 @@ async function renderSegment(id, body, ctx) {
   const { setStatus, askConfirm, setProgress } = ctx;
   const gen = (body._scGen = (body._scGen || 0) + 1);
   const alive = makeAlive(body, gen);
-  body.innerHTML = `<div class="empty-state">Chargement…</div>`;
+  body.innerHTML = `<div class="empty-state">${t("scLoading")}</div>`;
 
   try {
     const api = await wcApi();
     if (!alive()) return;
     if (!api) {
-      setStatus("API systemclean.wincleaner indisponible", "error");
-      body.innerHTML = `<div class="empty-state">Bridge Python indisponible.</div>`;
+      setStatus(t("scApiUnavailable"), "error");
+      body.innerHTML = `<div class="empty-state">${t("commonBridgeUnavailable")}</div>`;
       return;
     }
     if (id === "wc-health") return mountHealth(body, api, setStatus, askConfirm, alive);
@@ -259,31 +257,31 @@ async function mountHealth(body, api, setStatus, askConfirm) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="card-grid" id="hcCards">
-        <div class="card"><span class="label">État</span><span class="value">…</span></div>
+        <div class="card"><span class="label">${t("scHealthState")}</span><span class="value">…</span></div>
       </div>
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Santé système</strong>
-          <button type="button" class="btn accent" id="hcRefresh" style="margin-left:auto">Actualiser</button>
+          <strong>${t("scSystemHealth")}</strong>
+          <button type="button" class="btn accent" id="hcRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
         </div>
         <pre class="meta" id="hcOut" style="white-space:pre-wrap;margin-top:10px;max-height:280px;overflow:auto"></pre>
       </div>
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Dossiers temp</strong>
-          <button type="button" class="btn" id="hcTemp">Mesurer</button>
-          <button type="button" class="btn danger" id="hcRecycle">Vider corbeille</button>
-          <button type="button" class="btn" id="hcIcons">Cache icônes</button>
-          <button type="button" class="btn" id="hcRecent">Effacer récents</button>
+          <strong>${t("scTempFolders")}</strong>
+          <button type="button" class="btn" id="hcTemp">${t("scMeasure")}</button>
+          <button type="button" class="btn danger" id="hcRecycle">${t("scEmptyRecycle")}</button>
+          <button type="button" class="btn" id="hcIcons">${t("scIconCache")}</button>
+          <button type="button" class="btn" id="hcRecent">${t("scClearRecent")}</button>
         </div>
         <div class="table-wrap" style="max-height:220px;margin-top:10px">
-          <table class="data"><thead><tr><th>Chemin</th><th>Taille</th></tr></thead><tbody id="hcTempBody"></tbody></table>
+          <table class="data"><thead><tr><th>${t("commonPath")}</th><th>${t("commonSize")}</th></tr></thead><tbody id="hcTempBody"></tbody></table>
         </div>
       </div>
     </div>`;
 
   async function loadHealth() {
-    setStatus("Chargement santé…");
+    setStatus(t("scHealthLoading"));
     try {
       const res = await runSync(api, "getHealth", {});
       const data = res.data || res;
@@ -291,11 +289,11 @@ async function mountHealth(body, api, setStatus, askConfirm) {
       const cards = document.getElementById("hcCards");
       const disks = data.disks || data.Disks || [];
       const disk0 = Array.isArray(disks) && disks.length ? disks[0] : data.disk || data.Disk || {};
-      let adminLabel = data.admin === true || data.Admin === true ? "Oui" : data.admin === false ? "Non" : "—";
+      let adminLabel = data.admin === true || data.Admin === true ? t("commonYes") : data.admin === false ? t("commonNo") : "—";
       try {
         if (adminLabel === "—" && typeof api.is_admin === "function") {
           const adm = await api.is_admin();
-          adminLabel = adm === true || adm?.admin === true ? "Oui" : "Non";
+          adminLabel = adm === true || adm?.admin === true ? t("commonYes") : t("commonNo");
         }
       } catch (_) {}
       const freeLabel =
@@ -307,17 +305,17 @@ async function mountHealth(body, api, setStatus, askConfirm) {
           ? folders[0].SizeText || folders[0].sizeText || folders[0].Label || folders[0].label || ""
           : "";
       cards.innerHTML = `
-        <div class="card"><span class="label">Disque libre</span><span class="value">${esc(
+        <div class="card"><span class="label">${t("scDiskFree")}</span><span class="value">${esc(
           String(freeLabel)
         )}</span></div>
-        <div class="card"><span class="label">Utilisé</span><span class="value">${esc(
+        <div class="card"><span class="label">${t("scUsed")}</span><span class="value">${esc(
           String(usedLabel || "—")
         )}</span></div>
-        <div class="card"><span class="label">Admin</span><span class="value">${esc(adminLabel)}</span></div>
-        <div class="card"><span class="label">Dossier</span><span class="value">${esc(
+        <div class="card"><span class="label">${t("scAdmin")}</span><span class="value">${esc(adminLabel)}</span></div>
+        <div class="card"><span class="label">${t("scFolder")}</span><span class="value">${esc(
           String(folderHint || "OK")
         )}</span></div>`;
-      setStatus("Santé actualisée.", "ok");
+      setStatus(t("scHealthUpdated"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -339,11 +337,11 @@ async function mountHealth(body, api, setStatus, askConfirm) {
                 `<tr><td class="wrap">${esc(r.path || r.Path || r.name || "")}</td><td>${esc(
                   r.sizeText ||
                     r.SizeText ||
-                    (r.sizeMb != null ? `${r.sizeMb} Mo` : fmtBytes(r.bytes || r.size || r.Bytes || 0))
+                    (r.sizeMb != null ? `${r.sizeMb} ${t("unitMB")}` : fmtBytes(r.bytes || r.size || r.Bytes || 0))
                 )}</td></tr>`
             )
             .join("")
-        : `<tr><td colspan="2" class="empty-state">Aucune donnée temp</td></tr>`;
+        : `<tr><td colspan="2" class="empty-state">${t("scNoTempData")}</td></tr>`;
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -352,25 +350,25 @@ async function mountHealth(body, api, setStatus, askConfirm) {
   document.getElementById("hcRefresh").onclick = loadHealth;
   document.getElementById("hcTemp").onclick = loadTemp;
   document.getElementById("hcRecycle").onclick = async () => {
-    if (!(await askConfirm("Vider la corbeille ?", "Confirmer"))) return;
+    if (!(await askConfirm(t("scConfirmEmptyRecycle"), t("confirmTitle")))) return;
     const prep = await api.prepare_empty_recycle_bin();
-    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    if (!prep?.ok) return setStatus(prep?.error || t("commonRefused"), "error");
     const r = await api.empty_recycle_bin(prep.token);
-    setStatus(r?.ok ? "Corbeille vidée." : r?.error || "Échec", r?.ok ? "ok" : "error");
+    setStatus(r?.ok ? t("scRecycleEmptied") : r?.error || t("commonFailed"), r?.ok ? "ok" : "error");
   };
   document.getElementById("hcIcons").onclick = async () => {
-    if (!(await askConfirm("Reconstruire le cache d'icônes ?", "Confirmer"))) return;
+    if (!(await askConfirm(t("scConfirmRebuildIcons"), t("confirmTitle")))) return;
     const prep = await api.prepare_rebuild_icon_cache();
-    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    if (!prep?.ok) return setStatus(prep?.error || t("commonRefused"), "error");
     const r = await api.rebuild_icon_cache(prep.token);
-    setStatus(r?.ok ? "Cache icônes reconstruit." : r?.error || "Échec", r?.ok ? "ok" : "error");
+    setStatus(r?.ok ? t("scIconsRebuilt") : r?.error || t("commonFailed"), r?.ok ? "ok" : "error");
   };
   document.getElementById("hcRecent").onclick = async () => {
-    if (!(await askConfirm("Effacer les fichiers récents ?", "Confirmer"))) return;
+    if (!(await askConfirm(t("scConfirmClearRecent"), t("confirmTitle")))) return;
     const prep = await api.prepare_clear_recent_files();
-    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    if (!prep?.ok) return setStatus(prep?.error || t("commonRefused"), "error");
     const r = await api.clear_recent_files(prep.token);
-    setStatus(r?.ok ? "Récents effacés." : r?.error || "Échec", r?.ok ? "ok" : "error");
+    setStatus(r?.ok ? t("scRecentCleared") : r?.error || t("commonFailed"), r?.ok ? "ok" : "error");
   };
 
   await loadHealth();
@@ -382,16 +380,16 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Catégories de nettoyage</strong>
-          <button type="button" class="btn" id="clCats">Charger</button>
-          <button type="button" class="btn accent" id="clScan">Analyser</button>
-          <button type="button" class="btn danger" id="clRun">Nettoyer</button>
+          <strong>${t("scCleanCategories")}</strong>
+          <button type="button" class="btn" id="clCats">${t("commonLoad")}</button>
+          <button type="button" class="btn accent" id="clScan">${t("commonAnalyze")}</button>
+          <button type="button" class="btn danger" id="clRun">${t("scSegClean")}</button>
         </div>
         <div class="check-list" id="clList" style="margin-top:12px"></div>
         <p class="meta" id="clMeta" style="margin-top:8px"></p>
       </div>
       <div class="panel">
-        <strong>Résultat</strong>
+        <strong>${t("scCleanResult")}</strong>
         <pre class="meta" id="clOut" style="white-space:pre-wrap;margin-top:8px;max-height:260px;overflow:auto"></pre>
         <div class="progress-bar" style="margin-top:10px"><i id="clProg"></i></div>
       </div>
@@ -404,7 +402,7 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
   }
 
   async function loadCats() {
-    setStatus("Chargement catégories…");
+    setStatus(t("scCategoriesLoading"));
     try {
       const res = await runSync(api, "getCategories", {});
       const data = res.data || res;
@@ -422,9 +420,9 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
               )}</strong>${hint ? ` <span class="meta">— ${esc(hint)}</span>` : ""}</span></label>`;
             })
             .join("")
-        : `<p class="empty-state">Aucune catégorie</p>`;
-      document.getElementById("clMeta").textContent = `${categories.length} catégorie(s)`;
-      setStatus("Catégories prêtes.", "ok");
+        : `<p class="empty-state">${t("scNoCategory")}</p>`;
+      document.getElementById("clMeta").textContent = t("scCategoryCount", { n: categories.length });
+      setStatus(t("scCategoriesReady"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -433,10 +431,10 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
   document.getElementById("clCats").onclick = loadCats;
   document.getElementById("clScan").onclick = async () => {
     const ids = selectedIds();
-    if (!ids.length) return setStatus("Sélectionnez au moins une catégorie.", "error");
-    setStatus("Analyse en cours…");
+    if (!ids.length) return setStatus(t("scSelectCategory"), "error");
+    setStatus(t("scAnalyzing"));
     document.getElementById("clProg").style.width = "15%";
-    if (setProgress) setProgress(15, "Analyse…");
+    if (setProgress) setProgress(15, t("scAnalysisProgress"));
     try {
       const res = await runSync(api, "scanClean", { ids });
       const data = res.data || res;
@@ -459,8 +457,8 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
       document.getElementById("clOut").textContent =
         human || JSON.stringify(data, null, 2).slice(0, 6000);
       document.getElementById("clProg").style.width = "100%";
-      if (setProgress) setProgress(100, "Analyse terminée");
-      setStatus("Analyse terminée.", "ok");
+      if (setProgress) setProgress(100, t("scAnalysisDone"));
+      setStatus(t("scAnalysisDoneSentence"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     } finally {
@@ -469,27 +467,27 @@ async function mountClean(body, api, setStatus, askConfirm, setProgress) {
   };
   document.getElementById("clRun").onclick = async () => {
     const ids = selectedIds();
-    if (!ids.length) return setStatus("Sélectionnez au moins une catégorie.", "error");
-    setStatus("Nettoyage…");
+    if (!ids.length) return setStatus(t("scSelectCategory"), "error");
+    setStatus(t("scCleaning"));
     document.getElementById("clProg").style.width = "10%";
     const res = await runJob(
       api,
       "runClean",
       { ids },
       askConfirm,
-      `Nettoyer ${ids.length} catégorie(s) ?`,
+      t("scConfirmCleanCats", { n: ids.length }),
       (pct, label) => {
         document.getElementById("clProg").style.width = (pct || 0) + "%";
         if (setProgress) setProgress(pct, label);
       }
     );
     document.getElementById("clProg").style.width = "100%";
-    if (!res?.ok) return setStatus(res?.error || "Échec", "error");
+    if (!res?.ok) return setStatus(res?.error || t("commonFailed"), "error");
     const data = res.data || res;
     const summary = summarizeClean(data);
     document.getElementById("clOut").textContent =
       (summary ? summary + "\n\n" : "") + JSON.stringify(data, null, 2).slice(0, 4000);
-    setStatus(summary ? summary.split("\n")[0] : "Nettoyage terminé.", "ok");
+    setStatus(summary ? summary.split("\n")[0] : t("scCleanDone"), "ok");
     if (setProgress) setTimeout(() => setProgress(0, ""), 800);
   };
 
@@ -500,27 +498,26 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   body.innerHTML = `
     <div class="hub-inhub-scroll">
       <div class="guard-banner" id="trGuard">
-        Traces locales de ce que Windows a ouvert ou affiché. Lister avant d’effacer.
-        Les captures d’écran demandent une confirmation renforcée.
+        ${t("scTracesBanner")}
       </div>
       <div class="dm-stats" id="trStats" style="margin-bottom:10px">
-        <div class="stat"><span class="label">Catégories</span><span class="value" id="stTraceCats">—</span></div>
-        <div class="stat"><span class="label">Sélection</span><span class="value" id="stTraceSel">0</span></div>
-        <div class="stat"><span class="label">Éléments</span><span class="value" id="stTraceItems">—</span></div>
+        <div class="stat"><span class="label">${t("scCategories")}</span><span class="value" id="stTraceCats">—</span></div>
+        <div class="stat"><span class="label">${t("scSelection")}</span><span class="value" id="stTraceSel">0</span></div>
+        <div class="stat"><span class="label">${t("scItems")}</span><span class="value" id="stTraceItems">—</span></div>
       </div>
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Catégories de traces</strong>
-          <button type="button" class="btn accent" id="trScan" style="margin-left:auto">Lister</button>
-          <button type="button" class="btn danger" id="trClear">Effacer la sélection</button>
+          <strong>${t("scTraceCategories")}</strong>
+          <button type="button" class="btn accent" id="trScan" style="margin-left:auto">${t("scList")}</button>
+          <button type="button" class="btn danger" id="trClear">${t("scClearSelection")}</button>
         </div>
         <div class="check-list" id="trCats" style="margin-top:10px"></div>
         <p class="meta" id="trMeta" style="margin-top:8px"></p>
       </div>
       <div class="panel flex-fill" style="min-height:220px">
-        <strong>Contenu listé</strong>
+        <strong>${t("scListedContent")}</strong>
         <div id="trResult" class="traces-result" style="margin-top:10px">
-          <p class="meta">Lance une liste pour voir les traces.</p>
+          <p class="meta">${t("scTraceStartHint")}</p>
         </div>
       </div>
     </div>`;
@@ -555,7 +552,8 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   function renderTraceCats(byId) {
     catsEl.innerHTML = TRACE_CAT_IDS.map((id) => {
       const c = byId[id] || {};
-      const fb = TRACE_CAT_FALLBACK[id] || { label: id, description: "" };
+      const fallback = traceCatFallback();
+      const fb = fallback[id] || { label: id, description: "" };
       const label = c.Label || c.label || fb.label;
       const desc = c.Description || c.description || fb.description || "";
       const on = id !== "Screenshots" && c.DefaultOn !== false && c.defaultOn !== false;
@@ -581,8 +579,8 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
           : 0;
     document.getElementById("stTraceItems").textContent = String(total);
     document.getElementById("trMeta").textContent = data.totalText
-      ? `${total} élément(s) · ${data.totalText}`
-      : `${total} élément(s)`;
+      ? t("scTraceMetaSized", { n: total, size: data.totalText })
+      : t("scTraceMeta", { n: total });
 
     if (!Array.isArray(cats) || !cats.length) {
       // Flat fallback if API returns items[] only
@@ -601,7 +599,7 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
         document.getElementById("stTraceItems").textContent = String(items.length);
         return;
       }
-      resultEl.innerHTML = `<p class="meta">Aucune trace pour la sélection.</p>`;
+      resultEl.innerHTML = `<p class="meta">${t("scNoTraceSelection")}</p>`;
       return;
     }
 
@@ -627,7 +625,7 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
           : `<li class="meta">—</li>`;
         const more =
           count > items.length
-            ? `<li class="meta">… ${items.length} affiché(s) sur ${count}</li>`
+            ? `<li class="meta">${t("scShownOf", { shown: items.length, total: count })}</li>`
             : "";
         return `<div class="traces-group">
           <h4>${esc(label)} — ${count} · ${esc(size)}${note ? ` · ${esc(note)}` : ""}</h4>
@@ -656,18 +654,18 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   async function listTraces() {
     const ids = selectedTraceIds();
     if (!ids.length) {
-      setStatus("Sélectionnez au moins une catégorie de traces.", "error");
+      setStatus(t("scSelectTraceCategory"), "error");
       return;
     }
-    setStatus("Liste des traces…");
-    if (setProgress) setProgress(15, "Traces…");
+    setStatus(t("scTracesListing"));
+    if (setProgress) setProgress(15, t("scTracesProgress"));
     setTraceBusy(true);
     showTraceSkeleton();
     try {
       const res = await runSync(api, "listTraces", { ids });
       const data = res.data != null ? res.data : res;
       renderTraceGroups(data || {});
-      setStatus("Traces listées.", "ok");
+      setStatus(t("scTracesListed"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     } finally {
@@ -681,18 +679,18 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
   document.getElementById("trClear").onclick = async () => {
     const ids = selectedTraceIds();
     if (!ids.length) {
-      setStatus("Sélectionnez au moins une catégorie de traces.", "error");
+      setStatus(t("scSelectTraceCategory"), "error");
       return;
     }
     const ok = await askConfirm(
-      `Effacer les traces sélectionnées (${ids.length}) ?`,
-      "Effacer les traces"
+      t("scConfirmClearTraces", { n: ids.length }),
+      t("scClearTracesTitle")
     );
     if (!ok) return;
     if (ids.includes("Screenshots")) {
       const strong = await askConfirm(
-        "ATTENTION : cela supprimera aussi les captures d’écran listées. Continuer ?",
-        "Confirmation captures d’écran"
+        t("scConfirmScreenshots"),
+        t("scConfirmScreenshotsTitle")
       );
       if (!strong) return;
     }
@@ -707,14 +705,14 @@ async function mountTraces(body, api, setStatus, askConfirm, setProgress) {
         setProgress
       );
       if (!res?.ok) {
-        setStatus(res?.error || "Échec", "error");
+        setStatus(res?.error || t("commonFailed"), "error");
         if (setProgress) setTimeout(() => setProgress(0, ""), 600);
         return;
       }
       const data = res.data || res;
       const freed =
         data.FreedText || data.freedText || (data.FreedBytes != null ? fmtBytes(data.FreedBytes) : "");
-      setStatus(freed ? `Traces effacées — ${freed}` : "Traces effacées.", "ok");
+      setStatus(freed ? t("scTracesClearedFreed", { freed }) : t("scTracesCleared"), "ok");
       if (setProgress) setTimeout(() => setProgress(0, ""), 600);
     } finally {
       setTraceBusy(false);
@@ -730,9 +728,9 @@ async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Applications bloat</strong>
-          <button type="button" class="btn accent" id="dbScan">Scanner</button>
-          <button type="button" class="btn danger" id="dbRemove">Retirer sélection</button>
+          <strong>${t("scBloatApps")}</strong>
+          <button type="button" class="btn accent" id="dbScan">${t("commonScan")}</button>
+          <button type="button" class="btn danger" id="dbRemove">${t("scRemoveSelection")}</button>
         </div>
         <div class="check-list" id="dbList" style="margin-top:12px"></div>
         <p class="meta" id="dbMeta"></p>
@@ -740,8 +738,8 @@ async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {
     </div>`;
 
   document.getElementById("dbScan").onclick = async () => {
-    setStatus("Scan bloat…");
-    if (setProgress) setProgress(20, "Scan bloat…");
+    setStatus(t("scBloatScan"));
+    if (setProgress) setProgress(20, t("scBloatScan"));
     try {
       const res = await runSync(api, "getBloatApps", {});
       const data = res.data != null ? res.data : res;
@@ -760,9 +758,9 @@ async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {
             })
             .filter(Boolean)
             .join("")
-        : `<p class="empty-state">Aucune app bloat détectée (ou API sans liste)</p>`;
-      document.getElementById("dbMeta").textContent = `${apps.length} app(s)`;
-      setStatus(apps.length ? "Scan bloat OK." : "Scan OK — liste vide.", apps.length ? "ok" : "");
+        : `<p class="empty-state">${t("scNoBloatApps")}</p>`;
+      document.getElementById("dbMeta").textContent = t("scBloatAppCount", { n: apps.length });
+      setStatus(apps.length ? t("scBloatScanOk") : t("scBloatScanEmpty"), apps.length ? "ok" : "");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     } finally {
@@ -772,16 +770,16 @@ async function mountDebloat(body, api, setStatus, askConfirm, setProgress) {
 
   document.getElementById("dbRemove").onclick = async () => {
     const names = [...body.querySelectorAll("#dbList input:checked")].map((el) => el.value).filter(Boolean);
-    if (!names.length) return setStatus("Aucune app sélectionnée.", "error");
+    if (!names.length) return setStatus(t("scNoBloatSelected"), "error");
     const res = await runJob(
       api,
       "removeBloat",
       { names },
       askConfirm,
-      `Retirer ${names.length} application(s) bloat ?`,
+      t("scConfirmRemoveBloat", { n: names.length }),
       setProgress
     );
-    setStatus(res?.ok ? "Debloat terminé." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    setStatus(res?.ok ? t("scDebloatDone") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
     if (res?.ok) document.getElementById("dbScan").click();
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
@@ -792,16 +790,16 @@ async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <div class="search-wrap"><input type="search" id="unQ" placeholder="Mot-clé programme…" /></div>
-          <button type="button" class="btn accent" id="unFind">Rechercher</button>
-          <button type="button" class="btn danger" id="unOff">Désinstall. officielle</button>
-          <button type="button" class="btn" id="unPurge">Purger résidus</button>
+          <div class="search-wrap"><input type="search" id="unQ" placeholder="${esc(t("scProgramKeywordPh"))}" /></div>
+          <button type="button" class="btn accent" id="unFind">${t("commonSearch")}</button>
+          <button type="button" class="btn danger" id="unOff">${t("scOfficialUninstall")}</button>
+          <button type="button" class="btn" id="unPurge">${t("scPurgeLeftovers")}</button>
         </div>
         <p class="meta" id="unMeta"></p>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:200px">
         <div class="table-wrap">
-          <table class="data"><thead><tr><th></th><th>Nom</th><th>Détail</th></tr></thead><tbody id="unBody"></tbody></table>
+          <table class="data"><thead><tr><th></th><th>${t("commonName")}</th><th>${t("commonDetail")}</th></tr></thead><tbody id="unBody"></tbody></table>
         </div>
       </div>
     </div>`;
@@ -810,15 +808,15 @@ async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
 
   document.getElementById("unFind").onclick = async () => {
     const keyword = document.getElementById("unQ").value.trim();
-    if (!keyword) return setStatus("Mot-clé requis.", "error");
-    setStatus("Recherche…");
+    if (!keyword) return setStatus(t("scKeywordRequired"), "error");
+    setStatus(t("commonSearching"));
     try {
       const res = await runSync(api, "findPurge", { keyword });
       const data = res.data || res;
       last = { apps: data.apps || [], leftovers: data.leftovers || [] };
       const rows = [
         ...last.apps.map((a) => ({ kind: "app", name: a.Name || a.name, detail: a.Publisher || a.Version || "" })),
-        ...last.leftovers.map((p) => ({ kind: "path", name: typeof p === "string" ? p : p.path || "", detail: "résiduel" })),
+        ...last.leftovers.map((p) => ({ kind: "path", name: typeof p === "string" ? p : p.path || "", detail: t("scLeftover") })),
       ];
       document.getElementById("unBody").innerHTML = rows.length
         ? rows
@@ -829,9 +827,9 @@ async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
                 )}</td></tr>`
             )
             .join("")
-        : `<tr><td colspan="3" class="empty-state">Aucun résultat</td></tr>`;
-      document.getElementById("unMeta").textContent = `${last.apps.length} app(s) · ${last.leftovers.length} résidu(s)`;
-      setStatus("Recherche OK.", "ok");
+        : `<tr><td colspan="3" class="empty-state">${t("commonNoResult")}</td></tr>`;
+      document.getElementById("unMeta").textContent = t("scUninstallMeta", { apps: last.apps.length, leftovers: last.leftovers.length });
+      setStatus(t("commonSearchOk"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -845,10 +843,10 @@ async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
       "officialUninstall",
       { keyword },
       askConfirm,
-      `Lancer la désinstallation officielle pour « ${keyword} » ?`,
+      t("scConfirmOfficialUninstall", { keyword }),
       setProgress
     );
-    setStatus(res?.ok ? "Désinstallation lancée." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    setStatus(res?.ok ? t("scUninstallStarted") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
@@ -860,10 +858,10 @@ async function mountUninstall(body, api, setStatus, askConfirm, setProgress) {
       "purgeLeftovers",
       { keyword },
       askConfirm,
-      `Purger les résidus pour « ${keyword} » ?`,
+      t("scConfirmPurgeLeftovers", { keyword }),
       setProgress
     );
-    setStatus(res?.ok ? "Purge terminée." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    setStatus(res?.ok ? t("scPurgeDone") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 }
@@ -873,21 +871,20 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <p class="meta" style="margin-bottom:10px">
-          Optimisations WinCleaner : privacy / tâches / services / features, plus SFC, DISM et WinSxS.
-          Chaque action est confirmée (ConfirmGate).
+          ${t("scOptimIntro")}
         </p>
         <div class="check-list" id="opFlags" style="margin-bottom:12px">
           <label><input type="checkbox" id="opPrivacy" checked /> Privacy tweaks</label>
-          <label><input type="checkbox" id="opTasks" checked /> Tâches planifiées bloat</label>
-          <label><input type="checkbox" id="opServices" checked /> Services bloat</label>
-          <label><input type="checkbox" id="opFeatures" checked /> Features optionnelles</label>
-          <label><input type="checkbox" id="opComponent" checked /> Nettoyage composants</label>
+          <label><input type="checkbox" id="opTasks" checked /> ${t("scOptTasks")}</label>
+          <label><input type="checkbox" id="opServices" checked /> ${t("scOptServices")}</label>
+          <label><input type="checkbox" id="opFeatures" checked /> ${t("scOptFeatures")}</label>
+          <label><input type="checkbox" id="opComponent" checked /> ${t("scOptComponents")}</label>
         </div>
         <div class="toolbar-row" style="flex-wrap:wrap">
-          <button type="button" class="btn accent" id="opRun">Optimisations Windows</button>
+          <button type="button" class="btn accent" id="opRun">${t("scRunWindowsOptim")}</button>
           <button type="button" class="btn" id="opSfc">SFC /scannow</button>
           <button type="button" class="btn" id="opDism">DISM RestoreHealth</button>
-          <button type="button" class="btn" id="opWinsxs">Analyser WinSxS</button>
+          <button type="button" class="btn" id="opWinsxs">${t("scWinSxSAnalyze")}</button>
         </div>
         <div class="progress-bar" style="margin-top:12px"><i id="opProg"></i></div>
         <pre class="meta" id="opOut" style="white-space:pre-wrap;margin-top:10px;max-height:320px;overflow:auto"></pre>
@@ -906,9 +903,9 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
 
   async function job(action, msg, detail, payload) {
     setStatus(msg);
-    document.getElementById("opOut").textContent = detail + "\n\nDémarrage…";
+    document.getElementById("opOut").textContent = detail + "\n\n" + t("scStarting");
     document.getElementById("opProg").style.width = "12%";
-    const res = await runJob(api, action, payload || {}, askConfirm, msg + " Continuer ?", (pct, label) => {
+    const res = await runJob(api, action, payload || {}, askConfirm, `${msg} ${t("commonContinue")}`, (pct, label) => {
       document.getElementById("opProg").style.width = (pct || 0) + "%";
       if (setProgress) setProgress(pct, label);
     });
@@ -919,29 +916,29 @@ async function mountOpt(body, api, setStatus, askConfirm, setProgress) {
       detail +
       "\n\n" +
       (human ? human + "\n\n" : "") +
-      (res?.ok === false ? "Erreur : " + (res.error || "?") : JSON.stringify(data, null, 2).slice(0, 6000));
-    setStatus(res?.ok ? "Terminé." : res?.error || "Échec", res?.ok ? "ok" : "error");
+      (res?.ok === false ? t("commonError", { err: res.error || "?" }) : JSON.stringify(data, null, 2).slice(0, 6000));
+    setStatus(res?.ok ? t("commonDone") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
     if (setProgress) setTimeout(() => setProgress(0, ""), 800);
   }
 
   document.getElementById("opRun").onclick = () => {
     const pl = optPayload();
     if (!pl.privacy && !pl.tasks && !pl.services && !pl.features && !pl.componentCleanup) {
-      return setStatus("Cochez au moins une option d’optimisation.", "error");
+      return setStatus(t("scPickOptimization"), "error");
     }
     job(
       "runOptimizations",
-      "Lancer les optimisations Windows ?",
-      "Action : runOptimizations — " + JSON.stringify(pl),
+      t("scConfirmRunOptim"),
+      t("scActionRunOptim", { payload: JSON.stringify(pl) }),
       pl
     );
   };
   document.getElementById("opSfc").onclick = () =>
-    job("sfcScan", "Lancer SFC /scannow ?", "Action : sfcScan — vérifie et répare les fichiers système protégés (peut prendre longtemps).", {});
+    job("sfcScan", t("scConfirmSfc"), t("scActionSfc"), {});
   document.getElementById("opDism").onclick = () =>
-    job("dismRestoreHealth", "Lancer DISM RestoreHealth ?", "Action : dismRestoreHealth — répare l’image Windows via DISM (long).", {});
+    job("dismRestoreHealth", t("scConfirmDism"), t("scActionDism"), {});
   document.getElementById("opWinsxs").onclick = () =>
-    job("analyzeWinSxS", "Analyser WinSxS ?", "Action : analyzeWinSxS — analyse le magasin de composants (lecture / rapport).", {});
+    job("analyzeWinSxS", t("scConfirmWinsxs"), t("scActionWinsxs"), {});
 }
 
 async function mountSessions(body, api, setStatus) {
@@ -949,20 +946,20 @@ async function mountSessions(body, api, setStatus) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Sessions de nettoyage</strong>
-          <button type="button" class="btn accent" id="seRefresh" style="margin-left:auto">Actualiser</button>
-          <button type="button" class="btn" id="seExport">Exporter rapport</button>
+          <strong>${t("scSessionsTitle")}</strong>
+          <button type="button" class="btn accent" id="seRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
+          <button type="button" class="btn" id="seExport">${t("scExportReport")}</button>
         </div>
         <pre class="meta" id="seOut" style="white-space:pre-wrap;margin-top:10px;max-height:400px;overflow:auto"></pre>
       </div>
     </div>`;
 
   document.getElementById("seRefresh").onclick = async () => {
-    setStatus("Chargement sessions…");
+    setStatus(t("scSessionsLoading"));
     try {
       const res = await runSync(api, "getSessions", {});
       document.getElementById("seOut").textContent = JSON.stringify(res.data || res, null, 2).slice(0, 8000);
-      setStatus("Sessions chargées.", "ok");
+      setStatus(t("scSessionsLoaded"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -971,7 +968,7 @@ async function mountSessions(body, api, setStatus) {
     try {
       const res = await runSync(api, "exportReport", {});
       document.getElementById("seOut").textContent = JSON.stringify(res.data || res, null, 2).slice(0, 8000);
-      setStatus("Rapport exporté.", "ok");
+      setStatus(t("scReportExported"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -984,12 +981,12 @@ async function mountExclusions(body, api, setStatus, askConfirm) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Exclusions</strong>
-          <button type="button" class="btn" id="exLoad">Charger</button>
-          <button type="button" class="btn accent" id="exSave">Enregistrer</button>
+          <strong>${t("scExclusions")}</strong>
+          <button type="button" class="btn" id="exLoad">${t("commonLoad")}</button>
+          <button type="button" class="btn accent" id="exSave">${t("commonSave")}</button>
         </div>
         <textarea id="exArea" style="width:100%;min-height:220px;margin-top:10px;border-radius:12px;border:1px solid var(--border);background:var(--bg1);color:var(--text);padding:12px;font:inherit;font-size:0.85rem"></textarea>
-        <p class="meta">Une exclusion par ligne (chemins).</p>
+        <p class="meta">${t("scOneExclusionLine")}</p>
       </div>
     </div>`;
 
@@ -999,7 +996,7 @@ async function mountExclusions(body, api, setStatus, askConfirm) {
       const data = res.data || res;
       const list = data.exclusions || data.paths || data.items || [];
       document.getElementById("exArea").value = (Array.isArray(list) ? list : []).join("\n");
-      setStatus("Exclusions chargées.", "ok");
+      setStatus(t("scExclusionsLoaded"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -1015,9 +1012,9 @@ async function mountExclusions(body, api, setStatus, askConfirm) {
       "setExclusions",
       { paths, exclusions: paths },
       askConfirm,
-      `Enregistrer ${paths.length} exclusion(s) ?`
+      t("scConfirmSaveExclusions", { n: paths.length })
     );
-    setStatus(res?.ok ? "Exclusions enregistrées." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    setStatus(res?.ok ? t("scExclusionsSaved") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
   };
   document.getElementById("exLoad").click();
 }
@@ -1027,9 +1024,9 @@ async function mountTools(body, api, setStatus, askConfirm) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row" style="flex-wrap:wrap">
-          <button type="button" class="btn accent" id="tlRestore">Créer point de restauration</button>
-          <button type="button" class="btn" id="tlStartup">Lister démarrage</button>
-          <button type="button" class="btn" id="tlHub">Statut modules hub</button>
+          <button type="button" class="btn accent" id="tlRestore">${t("scCreateRestorePoint")}</button>
+          <button type="button" class="btn" id="tlStartup">${t("scListStartup")}</button>
+          <button type="button" class="btn" id="tlHub">${t("scHubStatus")}</button>
         </div>
         <pre class="meta" id="tlOut" style="white-space:pre-wrap;margin-top:12px;max-height:360px;overflow:auto"></pre>
       </div>
@@ -1041,16 +1038,16 @@ async function mountTools(body, api, setStatus, askConfirm) {
       "createRestorePoint",
       { description: "Mr-Aurevo-X SystemClean" },
       askConfirm,
-      "Créer un point de restauration système ?"
+      t("scConfirmCreateRestorePoint")
     );
     document.getElementById("tlOut").textContent = JSON.stringify(res, null, 2);
-    setStatus(res?.ok ? "Point créé." : res?.error || "Échec", res?.ok ? "ok" : "error");
+    setStatus(res?.ok ? t("scRestorePointCreated") : res?.error || t("commonFailed"), res?.ok ? "ok" : "error");
   };
   document.getElementById("tlStartup").onclick = async () => {
     try {
       const res = await runSync(api, "getStartup", {});
       document.getElementById("tlOut").textContent = JSON.stringify(res.data || res, null, 2).slice(0, 8000);
-      setStatus("Démarrage listé.", "ok");
+      setStatus(t("scStartupListed"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -1059,7 +1056,7 @@ async function mountTools(body, api, setStatus, askConfirm) {
     try {
       const res = await api.hub_module_status();
       document.getElementById("tlOut").textContent = JSON.stringify(res, null, 2);
-      setStatus("Statut hub OK.", "ok");
+      setStatus(t("scHubStatusOk"), "ok");
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }

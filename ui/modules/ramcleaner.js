@@ -10,6 +10,7 @@
  */
 import { esc } from "../_hub_util.js";
 import { ensureInHubCss, waitNs } from "./_in_hub.js";
+import { locale, t } from "../i18n.js";
 
 function ensureCss() {
   const id = "hub-ramcleaner-css";
@@ -36,8 +37,8 @@ export async function mount(root) {
     <div class="hub-ramcleaner hub-inhub" style="position:relative">
       <header class="hub-page-header rc-hero">
         <div>
-          <h1>RamCleaner</h1>
-          <p>Conseiller mémoire — analyse, trim working set, fin de tâche (ConfirmGate)</p>
+          <h1>${esc(t("rcTitle"))}</h1>
+          <p>${esc(t("rcSubtitle"))}</p>
         </div>
         <div class="rc-meter" aria-live="polite">
           <div class="rc-meter-top">
@@ -50,28 +51,28 @@ export async function mount(root) {
       </header>
 
       <div class="rc-toolbar">
-        <button type="button" class="btn accent" id="rcAnalyze">Analyser</button>
-        <button type="button" class="btn danger" id="rcKill" disabled>Terminer la sélection</button>
-        <button type="button" class="btn ghost" id="rcTrim" disabled>Vider working set</button>
+        <button type="button" class="btn accent" id="rcAnalyze">${esc(t("rcAnalyze"))}</button>
+        <button type="button" class="btn danger" id="rcKill" disabled>${esc(t("rcKill"))}</button>
+        <button type="button" class="btn ghost" id="rcTrim" disabled>${esc(t("rcTrim"))}</button>
         <span class="status" id="rcStatus"></span>
       </div>
 
       <div class="rc-panels">
         <section class="rc-panel">
           <div class="rc-panel-head">
-            <h2>Recommandations</h2>
-            <p class="rc-panel-sub">Cochées par défaut — ConfirmGate avant toute fin de tâche.</p>
+            <h2>${esc(t("rcRecTitle"))}</h2>
+            <p class="rc-panel-sub">${esc(t("rcRecSub"))}</p>
           </div>
           <div id="rcRecList" class="rc-list">${skeletonMarkup(3)}</div>
         </section>
         <section class="rc-panel">
           <div class="rc-panel-head">
-            <h2>Gros consommateurs</h2>
-            <p class="rc-panel-sub">Contexte — prudence, non cochés.</p>
+            <h2>${esc(t("rcCautionTitle"))}</h2>
+            <p class="rc-panel-sub">${esc(t("rcCautionSub"))}</p>
           </div>
           <div id="rcCautionList" class="rc-list">${skeletonMarkup(2)}</div>
           <div class="rc-panel-head rc-panel-head-spaced">
-            <h2>Top familles</h2>
+            <h2>${esc(t("rcFamTitle"))}</h2>
           </div>
           <div id="rcFamList" class="rc-fam-list"></div>
         </section>
@@ -79,11 +80,11 @@ export async function mount(root) {
 
       <div class="confirm-overlay" id="rcConfirm" hidden>
         <div class="confirm-box" role="dialog" aria-modal="true">
-          <h3 id="rcConfirmTitle">Confirmer</h3>
+          <h3 id="rcConfirmTitle">${esc(t("confirmTitle"))}</h3>
           <p id="rcConfirmMsg"></p>
           <div class="btn-row">
-            <button type="button" class="btn" id="rcConfirmCancel">Annuler</button>
-            <button type="button" class="btn danger" id="rcConfirmOk">Confirmer</button>
+            <button type="button" class="btn" id="rcConfirmCancel">${esc(t("confirmCancel"))}</button>
+            <button type="button" class="btn danger" id="rcConfirmOk">${esc(t("confirmOk"))}</button>
           </div>
         </div>
       </div>
@@ -115,8 +116,8 @@ export async function mount(root) {
     statusEl.className = "status" + (cls ? " " + cls : "");
   }
 
-  function askConfirm(message, titleText = "Confirmer") {
-    confirmTitle.textContent = titleText;
+  function askConfirm(message, titleText) {
+    confirmTitle.textContent = titleText || t("confirmTitle");
     confirmMsg.textContent = message;
     confirmOverlay.hidden = false;
     return new Promise((resolve) => {
@@ -166,15 +167,16 @@ export async function mount(root) {
     const used = ov.usedMb;
     const total = ov.totalMb;
     const pct = ov.percent;
-    ramLabel.textContent = `${Number(used).toLocaleString("fr")} / ${Number(total).toLocaleString("fr")} Mo`;
+    const loc = locale();
+    ramLabel.textContent = `${Number(used).toLocaleString(loc)} / ${Number(total).toLocaleString(loc)} Mo`;
     ramPct.textContent = `${Number(pct).toFixed(1)} %`;
     ramFill.style.width = `${Math.min(100, Number(pct) || 0)}%`;
-    ramDetail.textContent = `Disponible : ${Number(ov.availableMb).toLocaleString("fr")} Mo`;
+    ramDetail.textContent = t("rcAvailable", { n: Number(ov.availableMb).toLocaleString(loc) });
     famList.innerHTML = "";
     (ov.topFamilies || []).slice(0, 12).forEach((f) => {
       const row = document.createElement("div");
       row.className = "rc-fam-row";
-      row.innerHTML = `<span>${esc(f.name)} ×${esc(f.count)}</span><span>${Number(f.wsMb).toLocaleString("fr")} Mo</span>`;
+      row.innerHTML = `<span>${esc(f.name)} ×${esc(f.count)}</span><span>${Number(f.wsMb).toLocaleString(loc)} Mo</span>`;
       famList.appendChild(row);
     });
   }
@@ -186,13 +188,14 @@ export async function mount(root) {
     card.setAttribute("data-mb", String(rec.estFreedMb || 0));
     const checked = rec.defaultChecked ? "checked" : "";
     const pids = (rec.pids || []).slice(0, 6).join(", ") + ((rec.pids || []).length > 6 ? "…" : "");
+    const loc = locale();
     card.innerHTML = `
       <input type="checkbox" ${checked} />
       <div>
         <p class="rc-title">${esc(rec.title || "")}</p>
         <p class="rc-reason">${esc(rec.reason || "")} · PID ${esc(pids)}</p>
       </div>
-      <div class="rc-meta">~${Number(rec.estFreedMb || 0).toLocaleString("fr")} Mo</div>
+      <div class="rc-meta">~${Number(rec.estFreedMb || 0).toLocaleString(loc)} Mo</div>
     `;
     card.querySelector("input").addEventListener("change", updateActions);
     return card;
@@ -204,12 +207,12 @@ export async function mount(root) {
     const recs = data.recommendations || [];
     const caution = data.caution || [];
     if (!recs.length) {
-      recList.innerHTML = `<p class="rc-empty">Aucune recommandation pour l’instant. Lance une analyse.</p>`;
+      recList.innerHTML = `<p class="rc-empty">${esc(t("rcEmptyRec"))}</p>`;
     } else {
       recs.forEach((r) => recList.appendChild(renderCard(r, false)));
     }
     if (!caution.length) {
-      cautionList.innerHTML = `<p class="rc-empty">Rien de notable.</p>`;
+      cautionList.innerHTML = `<p class="rc-empty">${esc(t("rcEmptyCaution"))}</p>`;
     } else {
       caution.forEach((r) => cautionList.appendChild(renderCard(r, true)));
     }
@@ -218,28 +221,28 @@ export async function mount(root) {
 
   async function runAnalyze() {
     if (!api || typeof api.analyze !== "function") {
-      setStatus("API ramcleaner indisponible", "error");
+      setStatus(t("rcApiUnavailable"), "error");
       return;
     }
     busy = true;
     updateActions();
     recList.innerHTML = skeletonMarkup(4);
     cautionList.innerHTML = skeletonMarkup(3);
-    setStatus("Analyse…");
+    setStatus(t("rcAnalyzing"));
     try {
       const data = await api.analyze();
       if (!data || !data.ok) {
-        setStatus((data && data.error) || "Échec de l’analyse", "error");
-        recList.innerHTML = `<p class="rc-empty">Échec de l’analyse.</p>`;
+        setStatus((data && data.error) || t("rcAnalyzeFail"), "error");
+        recList.innerHTML = `<p class="rc-empty">${esc(t("rcAnalyzeFail"))}.</p>`;
         cautionList.innerHTML = "";
         return;
       }
       if (data.overview) renderOverview(data.overview);
       renderLists(data);
-      setStatus("Analyse terminée");
+      setStatus(t("rcAnalyzeDone"));
     } catch (e) {
-      setStatus("Échec de l’analyse", "error");
-      recList.innerHTML = `<p class="rc-empty">Échec de l’analyse.</p>`;
+      setStatus(t("rcAnalyzeFail"), "error");
+      recList.innerHTML = `<p class="rc-empty">${esc(t("rcAnalyzeFail"))}.</p>`;
       cautionList.innerHTML = "";
     } finally {
       busy = false;
@@ -254,28 +257,28 @@ export async function mount(root) {
   btnKill.addEventListener("click", async () => {
     const { pids, mb } = selectedPayload();
     if (!pids.length) {
-      setStatus("Aucune case cochée");
+      setStatus(t("rcNoneChecked"));
       return;
     }
-    const msg = `Terminer ${pids.length} processus sélectionné(s) ?\nGain estimé : ~${mb} Mo`;
-    if (!(await askConfirm(msg, "Terminer la sélection"))) return;
+    const msg = t("rcKillConfirm", { n: pids.length, mb });
+    if (!(await askConfirm(msg, t("rcKillConfirmTitle")))) return;
     busy = true;
     updateActions();
     try {
       const prep = await api.prepare_kill(pids);
       if (!prep || !prep.ok || !prep.token) {
-        setStatus((prep && prep.error) || "Confirmation refusée", "error");
+        setStatus((prep && prep.error) || t("commonFailed"), "error");
         return;
       }
       const res = await api.kill_selected(pids, prep.token);
       if (!res || !res.ok) {
-        setStatus((res && res.error) || "Échec", "error");
+        setStatus((res && res.error) || t("commonFailed"), "error");
         return;
       }
-      setStatus(`Terminé : ${res.killedCount || 0} processus. Relance l’analyse pour voir le delta.`);
+      setStatus(t("rcKillDone", { n: res.killedCount || 0 }));
       await runAnalyze();
     } catch (e) {
-      setStatus("Échec", "error");
+      setStatus(t("commonFailed"), "error");
     } finally {
       busy = false;
       updateActions();
@@ -285,28 +288,28 @@ export async function mount(root) {
   btnTrim.addEventListener("click", async () => {
     const { pids } = selectedPayload();
     if (!pids.length) {
-      setStatus("Aucune case cochée");
+      setStatus(t("rcNoneChecked"));
       return;
     }
-    const msg = `Vider le working set de ${pids.length} processus ? (sans les tuer)`;
-    if (!(await askConfirm(msg, "Vider working set"))) return;
+    const msg = t("rcTrimConfirm", { n: pids.length });
+    if (!(await askConfirm(msg, t("rcTrimConfirmTitle")))) return;
     busy = true;
     updateActions();
     try {
       const prep = await api.prepare_trim(pids);
       if (!prep || !prep.ok || !prep.token) {
-        setStatus((prep && prep.error) || "Confirmation refusée", "error");
+        setStatus((prep && prep.error) || t("commonFailed"), "error");
         return;
       }
       const res = await api.trim_selected(pids, prep.token);
       if (!res || !res.ok) {
-        setStatus((res && res.error) || "Échec", "error");
+        setStatus((res && res.error) || t("commonFailed"), "error");
         return;
       }
-      setStatus(`Working set vidé : ${res.trimmedCount || 0} processus.`);
+      setStatus(t("rcTrimDone", { n: res.trimmedCount || 0 }));
       await runAnalyze();
     } catch (e) {
-      setStatus("Échec", "error");
+      setStatus(t("commonFailed"), "error");
     } finally {
       busy = false;
       updateActions();
@@ -320,7 +323,7 @@ export async function mount(root) {
       if (ov && ov.ok) renderOverview(ov);
     } catch (_) {}
   }
-  recList.innerHTML = `<p class="rc-empty">Aucune recommandation pour l’instant. Lance une analyse.</p>`;
-  cautionList.innerHTML = `<p class="rc-empty">Rien de notable.</p>`;
+  recList.innerHTML = `<p class="rc-empty">${esc(t("rcEmptyRec"))}</p>`;
+  cautionList.innerHTML = `<p class="rc-empty">${esc(t("rcEmptyCaution"))}</p>`;
   updateActions();
 }

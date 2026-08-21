@@ -408,12 +408,16 @@ async function mountTiles() {
   } catch (_) {}
   if (!modules.length) modules = fallback;
   else {
-    modules = modules.map((m) => ({
-      ...m,
-      ico: ICO[m.id] || m.ico || "▪",
-      desc: m.desc || fallback.find((f) => f.id === m.id)?.desc || "",
-      label: m.label || fallback.find((f) => f.id === m.id)?.label || m.id,
-    }));
+    modules = modules.map((m) => {
+      const catalog = fallback.find((f) => f.id === m.id);
+      return {
+        ...m,
+        ico: ICO[m.id] || m.ico || "▪",
+        // Prefer i18n catalog when present (backend list_modules is FR-only).
+        desc: catalog?.desc || m.desc || "",
+        label: catalog?.label || m.label || m.id,
+      };
+    });
   }
   const tiles = el("tileGrid");
   if (!tiles) return;

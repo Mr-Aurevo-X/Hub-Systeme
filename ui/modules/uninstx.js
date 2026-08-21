@@ -8,6 +8,7 @@
  * Bridge: pywebview.api.uninstx.*
  */
 import { apiNs, esc } from "../_hub_util.js";
+import { t } from "../i18n.js";
 
 function ensureCss() {
   const id = "hub-uninstx-css";
@@ -35,33 +36,33 @@ export async function mount(root) {
   root.innerHTML = `
     <div class="hub-uninstx">
       <header class="hub-page-header">
-        <h1>UninstX</h1>
-        <p>Programmes installés — désinstallation avec confirmation · PC Command</p>
+        <h1>${esc(t("uxTitle"))}</h1>
+        <p>${esc(t("uxSubtitle"))}</p>
       </header>
 
       <div class="ux-content">
         <div class="toolbar-panel panel">
           <div class="toolbar-row">
             <div class="search-wrap">
-              <input type="search" id="uxSearch" placeholder="Filtrer par nom ou éditeur…" autocomplete="off" />
+              <input type="search" id="uxSearch" placeholder="${esc(t("uxSearchPh"))}" autocomplete="off" />
             </div>
-            <button type="button" class="btn accent" id="uxRefresh">Actualiser</button>
+            <button type="button" class="btn accent" id="uxRefresh">${esc(t("uxRefresh"))}</button>
           </div>
           <p class="apps-meta" id="uxMeta"></p>
         </div>
 
         <div class="panel apps-panel" id="uxAppsPanel">
-          <div id="uxLoading" class="empty-state">Chargement…</div>
-          <div id="uxEmpty" class="empty-state" hidden>Aucun programme trouvé.</div>
+          <div id="uxLoading" class="empty-state">${esc(t("uxLoading"))}</div>
+          <div id="uxEmpty" class="empty-state" hidden>${esc(t("uxEmpty"))}</div>
           <div class="table-wrap" id="uxTableWrap" hidden>
             <table class="apps-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Version</th>
-                  <th>Éditeur</th>
-                  <th>Source</th>
-                  <th>Actions</th>
+                  <th>${esc(t("uxColName"))}</th>
+                  <th>${esc(t("uxColVersion"))}</th>
+                  <th>${esc(t("uxColPublisher"))}</th>
+                  <th>${esc(t("uxColSource"))}</th>
+                  <th>${esc(t("uxColActions"))}</th>
                 </tr>
               </thead>
               <tbody id="uxBody"></tbody>
@@ -71,8 +72,8 @@ export async function mount(root) {
 
         <div class="panel leftovers-panel" id="uxLeftovers" hidden>
           <div class="leftovers-header">
-            <h3 id="uxLeftTitle">Fichiers résiduels</h3>
-            <button type="button" class="btn ghost" id="uxLeftClose" title="Fermer">✕</button>
+            <h3 id="uxLeftTitle">${esc(t("uxLeftovers"))}</h3>
+            <button type="button" class="btn ghost" id="uxLeftClose" title="${esc(t("uxClose"))}">✕</button>
           </div>
           <p class="leftovers-app" id="uxLeftApp"></p>
           <div id="uxLeftBody" class="leftovers-body"></div>
@@ -81,11 +82,11 @@ export async function mount(root) {
 
       <div class="confirm-overlay" id="uxConfirm" hidden>
         <div class="confirm-box" role="dialog" aria-modal="true">
-          <h3>Confirmer la désinstallation</h3>
+          <h3>${esc(t("uxConfirmTitle"))}</h3>
           <p id="uxConfirmMsg"></p>
           <div class="btn-row">
-            <button type="button" class="btn" id="uxConfirmCancel">Annuler</button>
-            <button type="button" class="btn danger" id="uxConfirmOk">Désinstaller</button>
+            <button type="button" class="btn" id="uxConfirmCancel">${esc(t("uxConfirmCancel"))}</button>
+            <button type="button" class="btn danger" id="uxConfirmOk">${esc(t("uxConfirmOk"))}</button>
           </div>
         </div>
       </div>
@@ -155,8 +156,8 @@ export async function mount(root) {
         `<td class="col-hive"><span class="hive-badge${hiveCls}">${esc(app.hive || "")}</span></td>` +
         `<td class="col-actions">` +
         `<button type="button" class="action-btn danger" data-action="uninstall" data-key="${key}"` +
-        ` ${hasUninstall ? "" : "disabled"} title="${hasUninstall ? "" : "Aucune commande de désinstallation"}">Désinstaller</button>` +
-        `<button type="button" class="action-btn" data-action="scan" data-key="${key}">Résiduels</button>` +
+        ` ${hasUninstall ? "" : "disabled"} title="${hasUninstall ? "" : esc(t("uxNoUninstallTitle"))}">${esc(t("uxUninstall"))}</button>` +
+        `<button type="button" class="action-btn" data-action="scan" data-key="${key}">${esc(t("uxScanLeftovers"))}</button>` +
         `</td>`;
       frag.appendChild(tr);
     }
@@ -164,15 +165,13 @@ export async function mount(root) {
 
     const total = allApps.length;
     const shown = apps.length;
-    appsMeta.textContent = shown === total ? `${total} programme(s) chargé(s).` : `${shown} / ${total}`;
+    appsMeta.textContent =
+      shown === total ? t("uxMetaAll", { n: total }) : t("uxMetaFiltered", { shown, total });
   }
 
   async function loadApps() {
     if (!api || typeof api.list_apps !== "function") {
-      setStatus(
-        "Erreur de chargement : API uninstx indisponible (pywebview.api.uninstx).",
-        "error"
-      );
+      setStatus(t("uxLoadError", { err: t("uxApiUnavailable") }), "error");
       loadingState.hidden = true;
       return;
     }
@@ -182,20 +181,20 @@ export async function mount(root) {
     appsBody.innerHTML = "";
     appsMeta.textContent = "";
     leftoversPanel.hidden = true;
-    setStatus("Chargement de la liste…");
+    setStatus(t("uxLoadingList"));
 
     try {
       const res = await api.list_apps("");
       if (!res || !res.ok) {
-        setStatus("Erreur de chargement : " + (res?.error || "réponse invalide"), "error");
+        setStatus(t("uxLoadError", { err: res?.error || "—" }), "error");
         loadingState.hidden = true;
         return;
       }
       allApps = Array.isArray(res.apps) ? res.apps : [];
       renderApps(getFiltered());
-      setStatus(`${allApps.length} programme(s) chargé(s).`);
+      setStatus(t("uxMetaAll", { n: allApps.length }));
     } catch (err) {
-      setStatus("Erreur de chargement : " + String(err), "error");
+      setStatus(t("uxLoadError", { err: String(err) }), "error");
       loadingState.hidden = true;
     }
   }
@@ -215,11 +214,11 @@ export async function mount(root) {
 
   function startUninstall(app) {
     if (!app.uninstall || !app.id) {
-      setStatus("Aucune commande de désinstallation disponible.", "error");
+      setStatus(t("uxNoUninstall"), "error");
       return;
     }
     pendingUninstall = { name: app.name, id: app.id };
-    confirmMsg.textContent = `Désinstaller « ${app.name} » ? Cette action est irréversible.`;
+    confirmMsg.textContent = t("uxConfirmMsg", { name: app.name });
     confirmOverlay.hidden = false;
   }
 
@@ -236,50 +235,50 @@ export async function mount(root) {
     try {
       const prep = await api.prepare_uninstall_app(id);
       if (!prep || !prep.ok || !prep.token) {
-        setStatus("Erreur de désinstallation : " + (prep?.error || "confirmation refusée"), "error");
+        setStatus(t("uxUninstallError", { err: prep?.error || t("commonFailed") }), "error");
         return;
       }
       const res = await api.uninstall_app(id, prep.token);
-      if (res && res.ok) setStatus(`Désinstallation de « ${name} » lancée.`, "ok");
-      else setStatus("Erreur de désinstallation : " + (res?.error || "?"), "error");
+      if (res && res.ok) setStatus(t("uxUninstallStarted", { name }), "ok");
+      else setStatus(t("uxUninstallError", { err: res?.error || "?" }), "error");
     } catch (err) {
-      setStatus("Erreur de désinstallation : " + String(err), "error");
+      setStatus(t("uxUninstallError", { err: String(err) }), "error");
     }
   });
 
   async function doScan(app) {
     leftoversPanel.hidden = false;
-    leftoversApp.textContent = `Résultats pour « ${app.name} »`;
-    leftoversBody.innerHTML = `<p class="empty-state" style="padding:12px">Recherche des résiduels…</p>`;
-    setStatus("Recherche des résiduels…");
+    leftoversApp.textContent = t("uxLeftoversFor", { name: app.name });
+    leftoversBody.innerHTML = `<p class="empty-state" style="padding:12px">${esc(t("uxLeftoversSearching"))}</p>`;
+    setStatus(t("uxLeftoversSearching"));
     try {
       const res = await api.scan_leftovers(app.name, app.location || "");
       leftoversBody.innerHTML = "";
       if (!res || !res.ok) {
-        leftoversBody.innerHTML = `<p class="leftovers-empty">${esc(res?.error || "Erreur")}</p>`;
-        setStatus("Erreur de scan : " + (res?.error || "?"), "error");
+        leftoversBody.innerHTML = `<p class="leftovers-empty">${esc(res?.error || t("commonFailed"))}</p>`;
+        setStatus(t("uxScanError", { err: res?.error || "?" }), "error");
         return;
       }
       const paths = res.paths || [];
       if (!paths.length) {
-        leftoversBody.innerHTML = `<p class="leftovers-empty">Aucun dossier résiduel trouvé.</p>`;
+        leftoversBody.innerHTML = `<p class="leftovers-empty">${esc(t("uxLeftoversNone"))}</p>`;
       } else {
         const note = document.createElement("p");
         note.className = "leftovers-app";
-        note.textContent = "Liste en lecture seule — aucune suppression automatique.";
+        note.textContent = t("uxLeftoversReadonly");
         leftoversBody.appendChild(note);
         for (const p of paths) {
           const item = document.createElement("div");
           item.className = "leftover-item";
           item.innerHTML = `<span class="path-text" title="${esc(p)}">${esc(p)}</span>
-            <button type="button" class="action-btn" data-action="openfolder" data-path="${esc(p)}">Ouvrir</button>`;
+            <button type="button" class="action-btn" data-action="openfolder" data-path="${esc(p)}">${esc(t("uxOpen"))}</button>`;
           leftoversBody.appendChild(item);
         }
       }
       setStatus("");
     } catch (err) {
       leftoversBody.innerHTML = `<p class="leftovers-empty">${esc(String(err))}</p>`;
-      setStatus("Erreur de scan : " + String(err), "error");
+      setStatus(t("uxScanError", { err: String(err) }), "error");
     }
   }
 

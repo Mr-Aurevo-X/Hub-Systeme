@@ -10,16 +10,19 @@
  * Mutators: UI confirm + ConfirmGate prepare_action + token.
  */
 import { mountModuleShell, waitNs, esc } from "./_in_hub.js";
+import { getLang, t } from "../i18n.js";
 
 const FOCUS_MODE_BY_NAME = { off: 0, priority: 1, alarms: 2 };
-const FOCUS_MODE_LABELS = {
-  0: "Désactivé",
-  1: "Priorité uniquement",
-  2: "Alarmes seulement",
-  off: "Désactivé",
-  priority: "Priorité uniquement",
-  alarms: "Alarmes seulement",
-};
+function focusModeLabels() {
+  return {
+    0: t("adFocusOff"),
+    1: t("adFocusPriority"),
+    2: t("adFocusAlarms"),
+    off: t("adFocusOff"),
+    priority: t("adFocusPriority"),
+    alarms: t("adFocusAlarms"),
+  };
+}
 
 function focusModeKey(res) {
   if (!res) return "unknown";
@@ -31,16 +34,16 @@ function focusModeKey(res) {
 }
 
 async function gatedCall(nsPath, action, payload, invoke, askConfirm, message, title) {
-  const ok = await askConfirm(message, title || "Confirmer");
-  if (!ok) return { ok: false, error: "Annulé", cancelled: true };
+  const ok = await askConfirm(message, title || t("confirmTitle"));
+  if (!ok) return { ok: false, error: t("commonCancelled"), cancelled: true };
   const api = await waitNs(nsPath, "prepare_action");
-  if (!api) return { ok: false, error: "API indisponible." };
+  if (!api) return { ok: false, error: t("commonApiUnavailable") };
   const prep = await api.prepare_action(action, payload || {});
   if (!prep || !prep.ok || !prep.token) {
-    return { ok: false, error: (prep && prep.error) || "Confirmation refusée" };
+    return { ok: false, error: (prep && prep.error) || t("commonFailed") };
   }
   try {
-    return (await invoke(api, prep.token)) || { ok: false, error: "Échec" };
+    return (await invoke(api, prep.token)) || { ok: false, error: t("commonFailed") };
   } catch (e) {
     return { ok: false, error: String(e.message || e) };
   }
@@ -48,13 +51,13 @@ async function gatedCall(nsPath, action, payload, invoke, askConfirm, message, t
 
 export async function mount(root) {
   const { body, setStatus, askConfirm } = mountModuleShell(root, {
-    title: "Admin léger",
-    subtitle: "PowerPlan · PrintQueue · RestorePoint · Sessions",
+    title: t("adTitle"),
+    subtitle: t("adSubtitle"),
     segments: [
-      { id: "powerplan",    label: "PowerPlan" },
-      { id: "printqueue",   label: "File d'impression" },
-      { id: "restorepoint", label: "Points de restauration" },
-      { id: "usersessions", label: "Sessions" },
+      { id: "powerplan",    label: t("adSegPowerplan") },
+      { id: "printqueue",   label: t("adSegPrintqueue") },
+      { id: "restorepoint", label: t("adSegRestorepoint") },
+      { id: "usersessions", label: t("adSegUsersessions") },
     ],
     onSegment,
   });
@@ -69,19 +72,19 @@ export async function mount(root) {
 
         <div class="panel flex-fill" style="display:flex;flex-direction:column;overflow:hidden;padding:14px 16px 8px">
           <div class="toolbar-row" style="flex-shrink:0;margin-bottom:8px">
-            <span style="font-size:0.84rem;font-weight:600;color:var(--text)">Plans d'alimentation</span>
-            <button type="button" class="btn accent" id="ppRefresh" style="margin-left:auto">Actualiser</button>
+            <span style="font-size:0.84rem;font-weight:600;color:var(--text)">${t("adPowerPlans")}</span>
+            <button type="button" class="btn accent" id="ppRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
           </div>
           <p class="meta" id="ppMeta"></p>
           <div class="table-wrap" style="flex:1;min-height:0;overflow:auto;margin-top:4px">
-            <div class="empty-state" id="ppEmpty">Chargement…</div>
+            <div class="empty-state" id="ppEmpty">${t("commonLoading")}</div>
             <table class="data" id="ppTable" hidden>
               <thead>
                 <tr>
-                  <th>Nom du plan</th>
+                  <th>${t("adPlanName")}</th>
                   <th>GUID</th>
-                  <th style="min-width:70px">Statut</th>
-                  <th style="min-width:80px">Action</th>
+                  <th style="min-width:70px">${t("commonStatus")}</th>
+                  <th style="min-width:80px">${t("commonAction")}</th>
                 </tr>
               </thead>
               <tbody id="ppBody"></tbody>
@@ -92,22 +95,22 @@ export async function mount(root) {
         <div style="display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0">
 
           <div class="panel" style="flex:1;min-width:260px" id="ppBattCard">
-            <p style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Batterie</p>
-            <div id="ppBattInfo" class="empty-state" style="padding:8px 0">Chargement…</div>
+            <p style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">${t("adBattery")}</p>
+            <div id="ppBattInfo" class="empty-state" style="padding:8px 0">${t("commonLoading")}</div>
             <div class="toolbar-row" style="margin-top:10px;gap:6px;flex-wrap:wrap">
-              <button type="button" class="btn accent" id="ppBattReport">Générer rapport</button>
-              <button type="button" class="btn ghost" id="ppBattOpen" disabled>Ouvrir dossier</button>
+              <button type="button" class="btn accent" id="ppBattReport">${t("adGenerateReport")}</button>
+              <button type="button" class="btn ghost" id="ppBattOpen" disabled>${t("commonOpenFolder")}</button>
             </div>
             <p class="meta" id="ppBattStatus" style="margin-top:8px"></p>
           </div>
 
           <div class="panel" style="flex:1;min-width:220px" id="ppFocusCard">
             <p style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Focus Assist</p>
-            <div id="ppFocusInfo" class="empty-state" style="padding:6px 0">Chargement…</div>
+            <div id="ppFocusInfo" class="empty-state" style="padding:6px 0">${t("commonLoading")}</div>
             <div class="toolbar-row" style="margin-top:10px;gap:6px" id="ppFocusBtns" hidden>
-              <button type="button" class="btn ghost" data-mode="off"    id="ppFocOff">Désactivé</button>
-              <button type="button" class="btn ghost" data-mode="priority" id="ppFocPri">Priorité</button>
-              <button type="button" class="btn ghost" data-mode="alarms" id="ppFocAlarm">Alarmes seulement</button>
+              <button type="button" class="btn ghost" data-mode="off"    id="ppFocOff">${t("adFocusOff")}</button>
+              <button type="button" class="btn ghost" data-mode="priority" id="ppFocPri">${t("adFocusPriorityShort")}</button>
+              <button type="button" class="btn ghost" data-mode="alarms" id="ppFocAlarm">${t("adFocusAlarms")}</button>
             </div>
           </div>
 
@@ -127,22 +130,22 @@ export async function mount(root) {
     const focusBtns  = body.querySelector("#ppFocusBtns");
 
     async function loadPlans() {
-      setStatus("Chargement des plans d'alimentation…");
+      setStatus(t("adPowerPlansLoading"));
       refreshBtn.disabled = true;
       tableEl.hidden = true;
       emptyEl.hidden = false;
-      emptyEl.textContent = "Chargement…";
+      emptyEl.textContent = t("commonLoading");
       try {
         const api = await waitNs("admin.powerplan", "list_plans");
-        if (!api) { setStatus("API admin.powerplan indisponible.", "error"); return; }
+        if (!api) { setStatus(t("commonApiUnavailable"), "error"); return; }
         const res = await api.list_plans();
         if (!res || !res.ok) {
-          setStatus((res && res.error) || "Erreur liste plans.", "error");
+          setStatus((res && res.error) || t("adPlanListError"), "error");
           return;
         }
         const plans = res.plans || [];
         if (!plans.length) {
-          emptyEl.textContent = "Aucun plan trouvé.";
+          emptyEl.textContent = t("adNoPowerPlan");
           metaEl.textContent = "";
           setStatus("", "");
           return;
@@ -156,21 +159,21 @@ export async function mount(root) {
               <td style="font-size:0.74rem;color:var(--muted);font-variant-numeric:tabular-nums">${esc(p.guid || "")}</td>
               <td>${
                 p.active
-                  ? `<span style="color:var(--ok,#3dd68c);font-weight:600">✓ Actif</span>`
+                  ? `<span style="color:var(--ok,#3dd68c);font-weight:600">✓ ${t("commonActive")}</span>`
                   : `<span style="color:var(--muted)">—</span>`
               }</td>
               <td>${
                 p.active
                   ? ""
-                  : `<button type="button" class="action-btn pp-activate" data-guid="${esc(p.guid)}" data-name="${esc(p.name || p.guid)}">Activer</button>`
+                  : `<button type="button" class="action-btn pp-activate" data-guid="${esc(p.guid)}" data-name="${esc(p.name || p.guid)}">${t("phEnable")}</button>`
               }</td>
             </tr>`
           )
           .join("");
-        metaEl.textContent = `${plans.length} plan${plans.length !== 1 ? "s" : ""}`;
-        setStatus("Plans chargés.", "ok");
+        metaEl.textContent = t("adPlanCount", { n: plans.length, plural: plans.length !== 1 ? "s" : "" });
+        setStatus(t("adPlansLoaded"), "ok");
       } catch (e) {
-        setStatus("Erreur : " + (e.message || e), "error");
+        setStatus(t("commonError", { err: e.message || e }), "error");
       } finally {
         refreshBtn.disabled = false;
       }
@@ -182,15 +185,15 @@ export async function mount(root) {
       const guid = btn.getAttribute("data-guid");
       const name = btn.getAttribute("data-name");
       btn.disabled = true;
-      setStatus("Activation du plan…");
+      setStatus(t("adActivatingPlan"));
       const res = await gatedCall(
         "admin.powerplan",
         "set_plan",
         { guid },
         (api, token) => api.set_plan(guid, token),
         askConfirm,
-        `Activer le plan « ${name} » ? Cela remplacera le plan d'alimentation actif.`,
-        "Changer de plan"
+        t("adConfirmSetPlan", { name }),
+        t("adChangePlanTitle")
       );
       if (res.cancelled) {
         btn.disabled = false;
@@ -198,79 +201,82 @@ export async function mount(root) {
         return;
       }
       if (!res.ok) {
-        setStatus(res.error || "Impossible d'activer le plan.", "error");
+        setStatus(res.error || t("adPlanActivateFailed"), "error");
         btn.disabled = false;
         return;
       }
-      setStatus(`Plan « ${name} » activé.`, "ok");
+      setStatus(t("adPlanActivated", { name }), "ok");
       await loadPlans();
     });
 
     async function loadBattery() {
-      battInfo.textContent = "Chargement…";
+      battInfo.textContent = t("commonLoading");
       try {
         const api = await waitNs("admin.powerplan", "get_battery_info");
-        if (!api) { battInfo.textContent = "API indisponible."; return; }
+        if (!api) { battInfo.textContent = t("commonApiUnavailable"); return; }
         const res = await api.get_battery_info();
         if (!res || !res.ok) {
-          battInfo.textContent = (res && res.error) || "Indisponible.";
+          battInfo.textContent = (res && res.error) || t("commonUnavailable");
           return;
         }
         if (!res.hasBattery) {
-          battInfo.innerHTML = `<p style="font-size:0.84rem;color:var(--muted)">Pas de batterie détectée (PC fixe ou info indisponible).</p>`;
+          battInfo.innerHTML = `<p style="font-size:0.84rem;color:var(--muted)">${t("adBatteryNoDetected")}</p>`;
           return;
         }
         const bats = Array.isArray(res.batteries) ? res.batteries : [];
         if (!bats.length) {
-          battInfo.innerHTML = `<p style="font-size:0.84rem;color:var(--muted)">Batterie détectée sans détail.</p>`;
+          battInfo.innerHTML = `<p style="font-size:0.84rem;color:var(--muted)">${t("adBatteryNoDetail")}</p>`;
           return;
         }
         battInfo.innerHTML = bats
           .map((b) => {
             const pct = b.chargePercent != null ? `${b.chargePercent}%` : "—";
-            const st = b.statusLabelFr || b.statusLabelEn || b.status || "—";
-            const name = b.name || "Batterie";
+            const st =
+              getLang() === "en"
+                ? b.statusLabelEn || b.statusLabelFr || b.status || "—"
+                : b.statusLabelFr || b.statusLabelEn || b.status || "—";
+            const name = b.name || t("adBatteryName");
             const design = Number(b.designCapacity);
             const full = Number(b.fullChargeCapacity);
             let capLine = "";
             if (Number.isFinite(design) && design > 0 && Number.isFinite(full) && full > 0) {
               const z = Math.round((full / design) * 100);
-              capLine = `<p style="font-size:0.84rem;margin:2px 0">Capacité : <strong>${esc(String(full))} mWh / ${esc(String(design))} mWh design (~${z}%)</strong></p>`;
+              capLine = `<p style="font-size:0.84rem;margin:2px 0">${t("adCapacity")}<strong>${esc(String(full))} mWh / ${esc(String(design))} mWh design (~${z}%)</strong></p>`;
             }
             return `<div style="margin-bottom:8px">
               <p style="font-size:0.84rem;margin:2px 0"><strong>${esc(name)}</strong></p>
-              <p style="font-size:0.84rem;margin:2px 0">Charge : <strong>${esc(pct)}</strong></p>
-              <p style="font-size:0.84rem;margin:2px 0">État : <strong>${esc(String(st))}</strong></p>
+              <p style="font-size:0.84rem;margin:2px 0">${t("adCharge")}<strong>${esc(pct)}</strong></p>
+              <p style="font-size:0.84rem;margin:2px 0">${t("adState")}<strong>${esc(String(st))}</strong></p>
               ${capLine}
             </div>`;
           })
           .join("");
       } catch {
-        battInfo.textContent = "Batterie non disponible.";
+        battInfo.textContent = t("commonUnavailable");
       }
     }
 
     battReport.addEventListener("click", async () => {
       battReport.disabled = true;
-      battStatus.textContent = "Génération du rapport powercfg…";
-      setStatus("Rapport batterie…");
+      battStatus.textContent = t("adGeneratingBatteryReport");
+      setStatus(t("adBatteryReportStatus"));
       try {
         const api = await waitNs("admin.powerplan", "generate_battery_report");
         if (!api) {
-          battStatus.textContent = "API indisponible.";
-          setStatus("API indisponible.", "error");
+          battStatus.textContent = t("commonApiUnavailable");
+          setStatus(t("commonApiUnavailable"), "error");
           return;
         }
         const res = await api.generate_battery_report();
         if (!res || !res.ok) {
-          battStatus.textContent = (res && res.error) || "Échec génération.";
+          battStatus.textContent = (res && res.error) || t("adGenerationFailed");
           setStatus(battStatus.textContent, "error");
           return;
         }
         lastBattFolder = res.folder || res.path || "";
         battOpen.disabled = !lastBattFolder;
-        battStatus.textContent = res.path ? `Rapport : ${res.path}` : "Rapport généré.";
-        setStatus("Rapport batterie prêt.", "ok");
+        battStatus.textContent = res.path ? t("adReportPath", { path: res.path }) : t("adReportGenerated");
+        setStatus(t("adBatteryReportReady"), "ok");
       } catch (e) {
         battStatus.textContent = String(e.message || e);
         setStatus(battStatus.textContent, "error");
@@ -286,7 +292,7 @@ export async function mount(root) {
         if (!api) return;
         const res = await api.open_battery_folder(lastBattFolder);
         if (!res || !res.ok) {
-          setStatus((res && res.error) || "Impossible d'ouvrir le dossier.", "error");
+          setStatus((res && res.error) || t("adOpenFolderFailed"), "error");
         }
       } catch (e) {
         setStatus(String(e.message || e), "error");
@@ -294,19 +300,20 @@ export async function mount(root) {
     });
 
     async function loadFocusAssist() {
-      focusInfo.textContent = "Chargement…";
+      focusInfo.textContent = t("commonLoading");
       focusBtns.hidden = true;
       try {
         const api = await waitNs("admin.powerplan", "get_focus_assist_state");
-        if (!api) { focusInfo.textContent = "API indisponible."; return; }
+        if (!api) { focusInfo.textContent = t("commonApiUnavailable"); return; }
         const res = await api.get_focus_assist_state();
         if (!res || !res.ok) {
-          focusInfo.textContent = (res && res.error) || "Indisponible.";
+          focusInfo.textContent = (res && res.error) || t("commonUnavailable");
           return;
         }
         const key = focusModeKey(res);
-        focusInfo.innerHTML = `<p style="font-size:0.84rem;margin:3px 0">Mode actuel : <strong>${esc(
-          FOCUS_MODE_LABELS[key] || key
+        const labels = focusModeLabels();
+        focusInfo.innerHTML = `<p style="font-size:0.84rem;margin:3px 0">${t("adCurrentMode")}<strong>${esc(
+          labels[key] || key
         )}</strong></p>`;
         focusBtns.hidden = false;
         focusBtns.querySelectorAll("[data-mode]").forEach((b) => {
@@ -315,7 +322,7 @@ export async function mount(root) {
           b.classList.toggle("active", on);
         });
       } catch {
-        focusInfo.textContent = "Focus Assist non disponible.";
+        focusInfo.textContent = t("adFocusUnavailable");
       }
     }
 
@@ -326,14 +333,14 @@ export async function mount(root) {
       const modeInt = FOCUS_MODE_BY_NAME[modeName];
       if (modeInt == null) return;
       focusBtns.querySelectorAll("[data-mode]").forEach((b) => (b.disabled = true));
-      setStatus("Modification de Focus Assist…");
+      setStatus(t("adChangingFocus"));
       const res = await gatedCall(
         "admin.powerplan",
         "set_focus_assist",
         { mode: modeInt },
         (api, token) => api.set_focus_assist(modeInt, token),
         askConfirm,
-        `Changer Focus Assist en « ${FOCUS_MODE_LABELS[modeName] || modeName} » ?`,
+        t("adConfirmFocusChange", { mode: focusModeLabels()[modeName] || modeName }),
         "Focus Assist"
       );
       focusBtns.querySelectorAll("[data-mode]").forEach((b) => (b.disabled = false));
@@ -342,10 +349,10 @@ export async function mount(root) {
         return;
       }
       if (!res.ok) {
-        setStatus(res.error || "Échec de la modification.", "error");
+        setStatus(res.error || t("adFocusChangeFailed"), "error");
         return;
       }
-      setStatus(`Focus Assist : ${FOCUS_MODE_LABELS[modeName] || modeName}.`, "ok");
+      setStatus(t("adFocusChanged", { mode: focusModeLabels()[modeName] || modeName }), "ok");
       await loadFocusAssist();
     });
 
@@ -362,19 +369,19 @@ export async function mount(root) {
     body.innerHTML = `
       <div class="panel flex-fill" style="display:flex;flex-direction:column;overflow:hidden;padding:14px 16px 8px">
         <div class="toolbar-row" style="flex-shrink:0;margin-bottom:8px">
-          <span style="font-size:0.84rem;font-weight:600;color:var(--text)">Files d'impression</span>
-          <button type="button" class="btn accent" id="pqRefresh" style="margin-left:auto">Actualiser</button>
+          <span style="font-size:0.84rem;font-weight:600;color:var(--text)">${t("adPrintQueues")}</span>
+          <button type="button" class="btn accent" id="pqRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
         </div>
         <p class="meta" id="pqMeta"></p>
         <div class="table-wrap" style="flex:1;min-height:0;overflow:auto;margin-top:4px">
-          <div class="empty-state" id="pqEmpty">Chargement…</div>
+          <div class="empty-state" id="pqEmpty">${t("commonLoading")}</div>
           <table class="data" id="pqTable" hidden>
             <thead>
               <tr>
-                <th>Imprimante</th>
-                <th style="min-width:70px">Travaux</th>
+                <th>${t("adPrinter")}</th>
+                <th style="min-width:70px">${t("adJobs")}</th>
                 <th style="min-width:100px">État</th>
-                <th style="min-width:80px">Action</th>
+                <th style="min-width:80px">${t("commonAction")}</th>
               </tr>
             </thead>
             <tbody id="pqBody"></tbody>
@@ -389,22 +396,22 @@ export async function mount(root) {
     const emptyEl    = body.querySelector("#pqEmpty");
 
     async function loadQueue() {
-      setStatus("Chargement de la file d'impression…");
+      setStatus(t("adPrintQueueLoading"));
       refreshBtn.disabled = true;
       tableEl.hidden = true;
       emptyEl.hidden = false;
-      emptyEl.textContent = "Chargement…";
+      emptyEl.textContent = t("commonLoading");
       try {
         const api = await waitNs("admin.printqueue", "list_print_queue");
-        if (!api) { setStatus("API admin.printqueue indisponible.", "error"); return; }
+        if (!api) { setStatus(t("commonApiUnavailable"), "error"); return; }
         const res = await api.list_print_queue();
         if (!res || !res.ok) {
-          setStatus((res && res.error) || "Erreur liste imprimantes.", "error");
+          setStatus((res && res.error) || t("adPrinterListError"), "error");
           return;
         }
         const printers = res.printers || [];
         if (!printers.length) {
-          emptyEl.textContent = "Aucune imprimante détectée.";
+          emptyEl.textContent = t("adNoPrinter");
           metaEl.textContent = "";
           setStatus("", "");
           return;
@@ -420,8 +427,8 @@ export async function mount(root) {
               <td style="font-size:0.8rem;color:var(--muted)">${esc(p.status || p.state || "—")}</td>
               <td>${
                 jobCount > 0
-                  ? `<button type="button" class="action-btn danger pq-purge" data-name="${esc(p.name)}">Vider</button>`
-                  : `<span style="color:var(--muted);font-size:0.76rem">Vide</span>`
+                  ? `<button type="button" class="action-btn danger pq-purge" data-name="${esc(p.name)}">${t("adEmpty")}</button>`
+                  : `<span style="color:var(--muted);font-size:0.76rem">${t("adEmpty")}</span>`
               }</td>
             </tr>`;
           })
@@ -430,10 +437,10 @@ export async function mount(root) {
           (s, p) => s + (p.jobCount ?? (Array.isArray(p.jobs) ? p.jobs.length : 0)),
           0
         );
-        metaEl.textContent = `${printers.length} imprimante${printers.length !== 1 ? "s" : ""} · ${total} travail${total !== 1 ? "x" : ""} en attente`;
-        setStatus("File d'impression chargée.", "ok");
+        metaEl.textContent = t("adPrintQueueMeta", { printers: printers.length, printerPlural: printers.length !== 1 ? "s" : "", jobs: total, jobPlural: total !== 1 ? "x" : "" });
+        setStatus(t("adPrintQueueLoaded"), "ok");
       } catch (e) {
-        setStatus("Erreur : " + (e.message || e), "error");
+        setStatus(t("commonError", { err: e.message || e }), "error");
       } finally {
         refreshBtn.disabled = false;
       }
@@ -444,15 +451,15 @@ export async function mount(root) {
       if (!btn || btn.disabled) return;
       const name = btn.getAttribute("data-name");
       btn.disabled = true;
-      setStatus(`Suppression des travaux de « ${name} »…`);
+      setStatus(t("adPurgingPrinter", { name }));
       const res = await gatedCall(
         "admin.printqueue",
         "purge_printer_jobs",
         { printer_name: name },
         (api, token) => api.purge_printer_jobs(name, token),
         askConfirm,
-        `Vider toute la file de l'imprimante « ${name} » ? Cette action est irréversible.`,
-        "Vider la file"
+        t("adConfirmPurgePrinter", { name }),
+        t("adPurgeQueueTitle")
       );
       if (res.cancelled) {
         btn.disabled = false;
@@ -460,11 +467,11 @@ export async function mount(root) {
         return;
       }
       if (!res.ok) {
-        setStatus(res.error || "Impossible de vider la file.", "error");
+        setStatus(res.error || t("adPurgeQueueFailed"), "error");
         btn.disabled = false;
         return;
       }
-      setStatus(`File de « ${name} » vidée.`, "ok");
+      setStatus(t("adPrinterPurged", { name }), "ok");
       await loadQueue();
     });
 
@@ -481,27 +488,27 @@ export async function mount(root) {
         <div class="panel" style="flex-shrink:0">
           <div class="toolbar-row" style="gap:8px">
             <div class="search-wrap">
-              <input type="text" id="rpDesc" placeholder="Description du point de restauration…" autocomplete="off" maxlength="128" />
+              <input type="text" id="rpDesc" placeholder="${esc(t("adRestoreDescriptionPh"))}" autocomplete="off" maxlength="128" />
             </div>
-            <button type="button" class="btn danger" id="rpCreate">Créer un point</button>
+            <button type="button" class="btn danger" id="rpCreate">${t("adCreatePoint")}</button>
           </div>
         </div>
 
         <div class="panel flex-fill" style="display:flex;flex-direction:column;overflow:hidden;padding:14px 16px 8px">
           <div class="toolbar-row" style="flex-shrink:0;margin-bottom:8px">
-            <span style="font-size:0.84rem;font-weight:600;color:var(--text)">Points existants</span>
-            <button type="button" class="btn accent" id="rpRefresh" style="margin-left:auto">Actualiser</button>
+            <span style="font-size:0.84rem;font-weight:600;color:var(--text)">${t("adExistingPoints")}</span>
+            <button type="button" class="btn accent" id="rpRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
           </div>
           <p class="meta" id="rpMeta"></p>
           <div class="table-wrap" style="flex:1;min-height:0;overflow:auto;margin-top:4px">
-            <div class="empty-state" id="rpEmpty">Chargement…</div>
+            <div class="empty-state" id="rpEmpty">${t("commonLoading")}</div>
             <table class="data" id="rpTable" hidden>
               <thead>
                 <tr>
-                  <th style="min-width:40px">#</th>
-                  <th>Description</th>
-                  <th style="min-width:160px">Date de création</th>
-                  <th style="min-width:100px">Type</th>
+                  <th style="min-width:40px">${t("adIndex")}</th>
+                  <th>${t("adDescription")}</th>
+                  <th style="min-width:160px">${t("adCreatedAt")}</th>
+                  <th style="min-width:100px">${t("adRestoreType")}</th>
                 </tr>
               </thead>
               <tbody id="rpBody"></tbody>
@@ -520,22 +527,22 @@ export async function mount(root) {
     const emptyEl    = body.querySelector("#rpEmpty");
 
     async function loadPoints() {
-      setStatus("Chargement des points de restauration…");
+      setStatus(t("adRestorePointsLoading"));
       refreshBtn.disabled = true;
       tableEl.hidden = true;
       emptyEl.hidden = false;
-      emptyEl.textContent = "Chargement…";
+      emptyEl.textContent = t("commonLoading");
       try {
         const api = await waitNs("admin.restorepoint", "list_restore_points");
-        if (!api) { setStatus("API admin.restorepoint indisponible.", "error"); return; }
+        if (!api) { setStatus(t("commonApiUnavailable"), "error"); return; }
         const res = await api.list_restore_points();
         if (!res || !res.ok) {
-          setStatus((res && res.error) || "Erreur liste points.", "error");
+          setStatus((res && res.error) || t("adRestorePointListError"), "error");
           return;
         }
         const items = res.items || res.points || [];
         if (!items.length) {
-          emptyEl.textContent = "Aucun point de restauration trouvé.";
+          emptyEl.textContent = t("adNoRestorePoint");
           metaEl.textContent = "";
           setStatus("", "");
           return;
@@ -554,10 +561,10 @@ export async function mount(root) {
             </tr>`
           )
           .join("");
-        metaEl.textContent = `${items.length} point${items.length !== 1 ? "s" : ""}`;
-        setStatus("Points de restauration chargés.", "ok");
+        metaEl.textContent = t("adRestorePointCount", { n: items.length, plural: items.length !== 1 ? "s" : "" });
+        setStatus(t("adRestorePointsLoaded"), "ok");
       } catch (e) {
-        setStatus("Erreur : " + (e.message || e), "error");
+        setStatus(t("commonError", { err: e.message || e }), "error");
       } finally {
         refreshBtn.disabled = false;
       }
@@ -566,20 +573,20 @@ export async function mount(root) {
     createBtn.addEventListener("click", async () => {
       const desc = descEl.value.trim();
       if (!desc) {
-        setStatus("Entrer une description avant de créer le point.", "error");
+        setStatus(t("adDescriptionRequired"), "error");
         descEl.focus();
         return;
       }
       createBtn.disabled = true;
-      setStatus("Création du point de restauration…");
+      setStatus(t("adCreatingRestorePoint"));
       const res = await gatedCall(
         "admin.restorepoint",
         "create_restore_point",
         { description: desc },
         (api, token) => api.create_restore_point(desc, token),
         askConfirm,
-        `Créer un point de restauration système : « ${desc} » ?`,
-        "Créer un point de restauration"
+        t("adConfirmCreateRestorePoint", { desc }),
+        t("adCreateRestorePointTitle")
       );
       createBtn.disabled = false;
       if (res.cancelled) {
@@ -587,10 +594,10 @@ export async function mount(root) {
         return;
       }
       if (!res.ok) {
-        setStatus(res.error || "Impossible de créer le point.", "error");
+        setStatus(res.error || t("adCreateRestorePointFailed"), "error");
         return;
       }
-      setStatus("Point de restauration créé avec succès.", "ok");
+      setStatus(t("adRestorePointCreated"), "ok");
       descEl.value = "";
       await loadPoints();
     });
@@ -605,20 +612,20 @@ export async function mount(root) {
     body.innerHTML = `
       <div class="panel flex-fill" style="display:flex;flex-direction:column;overflow:hidden;padding:14px 16px 8px">
         <div class="toolbar-row" style="flex-shrink:0;margin-bottom:8px">
-          <span style="font-size:0.84rem;font-weight:600;color:var(--text)">Sessions utilisateurs</span>
-          <button type="button" class="btn accent" id="usRefresh" style="margin-left:auto">Actualiser</button>
+          <span style="font-size:0.84rem;font-weight:600;color:var(--text)">${t("adUserSessions")}</span>
+          <button type="button" class="btn accent" id="usRefresh" style="margin-left:auto">${t("commonRefresh")}</button>
         </div>
         <p class="meta" id="usMeta"></p>
         <div class="table-wrap" style="flex:1;min-height:0;overflow:auto;margin-top:4px">
-          <div class="empty-state" id="usEmpty">Chargement…</div>
+          <div class="empty-state" id="usEmpty">${t("commonLoading")}</div>
           <table class="data" id="usTable" hidden>
             <thead>
               <tr>
-                <th style="min-width:50px">ID</th>
-                <th style="min-width:140px">Utilisateur</th>
-                <th style="min-width:90px">État</th>
-                <th style="min-width:140px">Connexion</th>
-                <th style="min-width:90px">Action</th>
+                <th style="min-width:50px">${t("adSessionId")}</th>
+                <th style="min-width:140px">${t("commonUser")}</th>
+                <th style="min-width:90px">${t("commonStatus")}</th>
+                <th style="min-width:140px">${t("adConnection")}</th>
+                <th style="min-width:90px">${t("commonAction")}</th>
               </tr>
             </thead>
             <tbody id="usBody"></tbody>
@@ -633,22 +640,22 @@ export async function mount(root) {
     const emptyEl    = body.querySelector("#usEmpty");
 
     async function loadSessions() {
-      setStatus("Chargement des sessions…");
+      setStatus(t("adSessionsLoading"));
       refreshBtn.disabled = true;
       tableEl.hidden = true;
       emptyEl.hidden = false;
-      emptyEl.textContent = "Chargement…";
+      emptyEl.textContent = t("commonLoading");
       try {
         const api = await waitNs("admin.usersessions", "list_sessions");
-        if (!api) { setStatus("API admin.usersessions indisponible.", "error"); return; }
+        if (!api) { setStatus(t("commonApiUnavailable"), "error"); return; }
         const res = await api.list_sessions();
         if (!res || !res.ok) {
-          setStatus((res && res.error) || "Erreur liste sessions.", "error");
+          setStatus((res && res.error) || t("adSessionListError"), "error");
           return;
         }
         const items = res.sessions || res.items || [];
         if (!items.length) {
-          emptyEl.textContent = "Aucune session active.";
+          emptyEl.textContent = t("adNoActiveSession");
           metaEl.textContent = "";
           setStatus("", "");
           return;
@@ -670,15 +677,15 @@ export async function mount(root) {
               <td>
                 <button type="button" class="action-btn danger us-logoff"
                   data-id="${esc(String(sid))}" data-sid="${esc(String(Number.isFinite(sidNum) ? sidNum : sid))}"
-                  data-user="${esc(user)}">Déconnecter</button>
+                  data-user="${esc(user)}">${t("adLogoff")}</button>
               </td>
             </tr>`;
           })
           .join("");
-        metaEl.textContent = `${items.length} session${items.length !== 1 ? "s" : ""}`;
-        setStatus("Sessions chargées.", "ok");
+        metaEl.textContent = t("adSessionCount", { n: items.length, plural: items.length !== 1 ? "s" : "" });
+        setStatus(t("adSessionsLoaded"), "ok");
       } catch (e) {
-        setStatus("Erreur : " + (e.message || e), "error");
+        setStatus(t("commonError", { err: e.message || e }), "error");
       } finally {
         refreshBtn.disabled = false;
       }
@@ -691,19 +698,19 @@ export async function mount(root) {
       const sid = Number(btn.getAttribute("data-sid") || id);
       const user = btn.getAttribute("data-user");
       if (!Number.isFinite(sid) || sid <= 0) {
-        setStatus("ID de session invalide.", "error");
+        setStatus(t("adInvalidSessionId"), "error");
         return;
       }
       btn.disabled = true;
-      setStatus(`Déconnexion de la session ${id}…`);
+      setStatus(t("adLoggingOffSession", { id }));
       const res = await gatedCall(
         "admin.usersessions",
         "logoff_session",
         { session_id: sid },
         (api, token) => api.logoff_session(sid, token),
         askConfirm,
-        `Déconnecter la session de « ${user} » (ID ${id}) ? Les données non enregistrées seront perdues.`,
-        "Déconnecter la session"
+        t("adConfirmLogoffSession", { user, id }),
+        t("adLogoffSessionTitle")
       );
       if (res.cancelled) {
         btn.disabled = false;
@@ -711,11 +718,11 @@ export async function mount(root) {
         return;
       }
       if (!res.ok) {
-        setStatus(res.error || "Impossible de déconnecter.", "error");
+        setStatus(res.error || t("adLogoffFailed"), "error");
         btn.disabled = false;
         return;
       }
-      setStatus(`Session ${id} (${user}) déconnectée.`, "ok");
+      setStatus(t("adSessionLoggedOff", { id, user }), "ok");
       await loadSessions();
     });
 

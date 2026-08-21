@@ -9,6 +9,7 @@
  * Bridge: pywebview.api.processhub.*
  */
 import { mountModuleShell, waitNs, esc } from "./_in_hub.js";
+import { locale, t } from "../i18n.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -16,15 +17,15 @@ function fmtMb(mb) {
   if (mb == null || mb === "") return "—";
   const n = Number(mb);
   if (isNaN(n)) return "—";
-  if (n >= 1024) return (n / 1024).toFixed(1) + " Go";
-  return n.toFixed(0) + " Mo";
+  if (n >= 1024) return `${(n / 1024).toFixed(1)} ${t("unitGB")}`;
+  return `${n.toFixed(0)} ${t("unitMB")}`;
 }
 
 function fmtBytes(b) {
   if (!b) return "—";
   const gb = b / (1024 ** 3);
-  if (gb >= 1) return gb.toFixed(1) + " Go";
-  return (b / (1024 ** 2)).toFixed(0) + " Mo";
+  if (gb >= 1) return `${gb.toFixed(1)} ${t("unitGB")}`;
+  return `${(b / (1024 ** 2)).toFixed(0)} ${t("unitMB")}`;
 }
 
 function fmtPct(p) {
@@ -76,30 +77,30 @@ function normTask(t) {
   };
 }
 
-function mkEmpty(msg = "Aucun élément.") {
-  return `<div class="empty-state">${esc(msg)}</div>`;
+function mkEmpty(msg) {
+  return `<div class="empty-state">${esc(msg || t("commonEmpty"))}</div>`;
 }
 
 function sortKey(a, b, key, dir) {
   const va = a[key] ?? "";
   const vb = b[key] ?? "";
   if (typeof va === "number" && typeof vb === "number") return dir * (va - vb);
-  return dir * String(va).localeCompare(String(vb), "fr", { numeric: true });
+  return dir * String(va).localeCompare(String(vb), locale(), { numeric: true });
 }
 
 // ─── mount ──────────────────────────────────────────────────────────────────
 
 export async function mount(root) {
   const SEGMENTS = [
-    { id: "processes", label: "Processus" },
-    { id: "services",  label: "Services"   },
-    { id: "startup",   label: "Démarrage"  },
-    { id: "tasks",     label: "Tâches"     },
+    { id: "processes", label: t("phSegProcesses") },
+    { id: "services",  label: t("phSegServices") },
+    { id: "startup",   label: t("phSegStartup") },
+    { id: "tasks",     label: t("phSegTasks") },
   ];
 
   const { body, setStatus, setSegment, askConfirm } = mountModuleShell(root, {
-    title:          "ProcessHub",
-    subtitle:       "Processus · Services · Démarrage · Tâches",
+    title:          t("phTitle"),
+    subtitle:       t("phSubtitle"),
     segments:       SEGMENTS,
     initialSegment: "processes",
     onSegment:      (id, b) => loadSegment(id, b),
@@ -107,7 +108,7 @@ export async function mount(root) {
 
   const api = await waitNs("processhub", "list_processes");
   if (!api) {
-    setStatus("API processhub indisponible (pywebview.api.processhub).", "error");
+    setStatus(t("phApiUnavailable"), "error");
     return;
   }
 
@@ -129,12 +130,12 @@ export async function mount(root) {
       <div class="panel" style="flex-shrink:0">
         <div class="toolbar-row">
           <div class="search-wrap">
-            <input type="search" data-ph="proc-search" placeholder="Filtrer par nom, PID, utilisateur…" autocomplete="off" />
+            <input type="search" data-ph="proc-search" placeholder="${esc(t("phProcSearchPh"))}" autocomplete="off" />
           </div>
-          <button type="button" class="btn accent" data-ph="proc-refresh">Actualiser</button>
-          <button type="button" class="btn" data-ph="proc-kill"     disabled>Terminer</button>
-          <button type="button" class="btn" data-ph="proc-ws"       disabled>Vider RAM</button>
-          <button type="button" class="btn" data-ph="proc-folder"   disabled>Ouvrir dossier</button>
+          <button type="button" class="btn accent" data-ph="proc-refresh">${t("commonRefresh")}</button>
+          <button type="button" class="btn" data-ph="proc-kill"     disabled>${t("phKill")}</button>
+          <button type="button" class="btn" data-ph="proc-ws"       disabled>${t("phTrimRam")}</button>
+          <button type="button" class="btn" data-ph="proc-folder"   disabled>${t("phOpenFolder")}</button>
         </div>
         <p class="meta" data-ph="proc-meta"></p>
         <div class="toolbar-row" style="gap:6px;margin-top:6px" data-ph="proc-ram-row">
@@ -145,18 +146,18 @@ export async function mount(root) {
         <div class="table-wrap" data-ph="proc-table-wrap">
           <table class="data">
             <thead><tr>
-              <th data-sort="name"  style="cursor:pointer">Nom ↕</th>
-              <th data-sort="pid"   style="cursor:pointer">PID ↕</th>
-              <th data-sort="cpu"   style="cursor:pointer">CPU % ↕</th>
-              <th data-sort="memMb" style="cursor:pointer">RAM ↕</th>
-              <th data-sort="user"  style="cursor:pointer">Utilisateur ↕</th>
-              <th>Statut</th>
+              <th data-sort="name"  style="cursor:pointer">${t("phColNameSort")}</th>
+              <th data-sort="pid"   style="cursor:pointer">${t("phColPidSort")}</th>
+              <th data-sort="cpu"   style="cursor:pointer">${t("phColCpuSort")}</th>
+              <th data-sort="memMb" style="cursor:pointer">${t("phColRamSort")}</th>
+              <th data-sort="user"  style="cursor:pointer">${t("phColUserSort")}</th>
+              <th>${t("commonStatus")}</th>
             </tr></thead>
             <tbody data-ph="proc-body"></tbody>
           </table>
         </div>
-        <div data-ph="proc-empty" class="empty-state" hidden>Aucun processus.</div>
-        <div data-ph="proc-loading" class="empty-state">Chargement…</div>
+        <div data-ph="proc-empty" class="empty-state" hidden>${t("phNoProcess")}</div>
+        <div data-ph="proc-loading" class="empty-state">${t("commonLoading")}</div>
       </div>`;
 
     const $ = (sel) => el.querySelector(`[data-ph="${sel}"]`);
@@ -182,7 +183,7 @@ export async function mount(root) {
         const r = await api.get_memory_totals();
         if (r && r.ok) {
           ramEl.textContent =
-            `RAM : ${fmtBytes(r.usedBytes)} / ${fmtBytes(r.totalBytes)}  (${fmtPct(r.percentUsed)})`;
+            t("phRamUsage", { used: fmtBytes(r.usedBytes), total: fmtBytes(r.totalBytes), pct: fmtPct(r.percentUsed) });
         }
       } catch (_) {}
     }
@@ -223,7 +224,7 @@ export async function mount(root) {
       }
       tbody.innerHTML = "";
       tbody.appendChild(frag);
-      metaEl.textContent = `${list.length} / ${allProcs.length} processus`;
+      metaEl.textContent = t("phProcessCount", { shown: list.length, total: allProcs.length });
     }
 
     tbody.addEventListener("click", (e) => {
@@ -252,34 +253,34 @@ export async function mount(root) {
       if (selectedPid == null) return;
       const proc = allProcs.find((p) => p.pid === selectedPid);
       const ok = await askConfirm(
-        `Terminer le processus « ${proc?.name || selectedPid} » (PID ${selectedPid}) ?`,
-        "Terminer le processus"
+        t("phConfirmKillProcess", { name: proc?.name || selectedPid, pid: selectedPid }),
+        t("phKillProcessTitle")
       );
       if (!ok) return;
       try {
         const prep = await api.prepare_kill(selectedPid);
-        if (!prep?.ok || !prep?.token) { setStatus("Préparation échouée : " + (prep?.error || "?"), "error"); return; }
+        if (!prep?.ok || !prep?.token) { setStatus(t("commonPrepFailed", { err: prep?.error || "?" }), "error"); return; }
         const res = await api.kill_process(selectedPid, prep.token);
-        if (res?.ok) { setStatus(`Processus ${selectedPid} terminé.`, "ok"); selectedPid = null; await loadProcs(); }
-        else setStatus("Erreur : " + (res?.error || "?"), "error");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+        if (res?.ok) { setStatus(t("phProcessKilled", { pid: selectedPid }), "ok"); selectedPid = null; await loadProcs(); }
+        else setStatus(t("commonError", { err: res?.error || "?" }), "error");
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); }
     });
 
     btnWs.addEventListener("click", async () => {
       if (selectedPid == null) return;
       const proc = allProcs.find((p) => p.pid === selectedPid);
       const ok = await askConfirm(
-        `Vider le working set de « ${proc?.name || selectedPid} » (PID ${selectedPid}) ?`,
-        "Vider la RAM"
+        t("phConfirmTrimWorkingSet", { name: proc?.name || selectedPid, pid: selectedPid }),
+        t("phTrimRamTitle")
       );
       if (!ok) return;
       try {
         const prep = await api.prepare_empty_working_set(selectedPid);
-        if (!prep?.ok || !prep?.token) { setStatus("Préparation échouée : " + (prep?.error || "?"), "error"); return; }
+        if (!prep?.ok || !prep?.token) { setStatus(t("commonPrepFailed", { err: prep?.error || "?" }), "error"); return; }
         const res = await api.empty_working_set(selectedPid, prep.token);
-        if (res?.ok) { setStatus(`Working set de ${selectedPid} vidé.`, "ok"); await loadProcs(); }
-        else setStatus("Erreur : " + (res?.error || "?"), "error");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+        if (res?.ok) { setStatus(t("phWorkingSetTrimmed", { pid: selectedPid }), "ok"); await loadProcs(); }
+        else setStatus(t("commonError", { err: res?.error || "?" }), "error");
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); }
     });
 
     btnFolder.addEventListener("click", () => {
@@ -290,16 +291,16 @@ export async function mount(root) {
 
     async function loadProcs() {
       loadingEl.hidden = false; emptyEl.hidden = true; tableWrap.hidden = true;
-      metaEl.textContent = ""; setStatus("Chargement des processus…");
+      metaEl.textContent = ""; setStatus(t("phLoadingProcesses"));
       try {
         const res = await api.list_processes();
-        if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
+        if (!res?.ok) { setStatus(t("commonError", { err: res?.error || "?" }), "error"); loadingEl.hidden = true; return; }
         allProcs = Array.isArray(res.processes) ? res.processes : [];
         if (!allProcs.find((p) => p.pid === selectedPid)) { selectedPid = null; }
         renderProcs();
         updateActionBtns();
         setStatus("");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); loadingEl.hidden = true; }
       await refreshRam();
     }
 
@@ -313,9 +314,9 @@ export async function mount(root) {
       <div class="panel" style="flex-shrink:0">
         <div class="toolbar-row">
           <div class="search-wrap">
-            <input type="search" data-ph="svc-search" placeholder="Filtrer par nom ou statut…" autocomplete="off" />
+            <input type="search" data-ph="svc-search" placeholder="${esc(t("phSvcSearchPh"))}" autocomplete="off" />
           </div>
-          <button type="button" class="btn accent" data-ph="svc-refresh">Actualiser</button>
+          <button type="button" class="btn accent" data-ph="svc-refresh">${t("commonRefresh")}</button>
         </div>
         <p class="meta" data-ph="svc-meta"></p>
       </div>
@@ -323,17 +324,17 @@ export async function mount(root) {
         <div class="table-wrap" data-ph="svc-table-wrap">
           <table class="data">
             <thead><tr>
-              <th>Nom</th>
-              <th>Nom affiché</th>
-              <th>Statut</th>
-              <th>Démarrage</th>
-              <th>Actions</th>
+              <th>${t("commonName")}</th>
+              <th>${t("phDisplayName")}</th>
+              <th>${t("commonStatus")}</th>
+              <th>${t("phStartup")}</th>
+              <th>${t("commonActions")}</th>
             </tr></thead>
             <tbody data-ph="svc-body"></tbody>
           </table>
         </div>
-        <div data-ph="svc-empty"   class="empty-state" hidden>Aucun service.</div>
-        <div data-ph="svc-loading" class="empty-state">Chargement…</div>
+        <div data-ph="svc-empty"   class="empty-state" hidden>${t("phNoService")}</div>
+        <div data-ph="svc-loading" class="empty-state">${t("commonLoading")}</div>
       </div>`;
 
     const $ = (s) => el.querySelector(`[data-ph="${s}"]`);
@@ -373,15 +374,15 @@ export async function mount(root) {
           `<td><span style="color:${running ? "var(--ok,#3dd68c)" : stopped ? "#ff8a95" : "var(--muted)"}">${esc(status)}</span></td>` +
           `<td>${esc(start)}</td>` +
           `<td>` +
-          `<button type="button" class="action-btn" data-svc-action="start"   data-svc="${esc(name)}" ${running  ? "disabled" : ""}>Démarrer</button>` +
-          `<button type="button" class="action-btn danger" data-svc-action="stop" data-svc="${esc(name)}" ${stopped ? "disabled" : ""}>Arrêter</button>` +
-          `<button type="button" class="action-btn" data-svc-action="restart" data-svc="${esc(name)}">Redémarrer</button>` +
+          `<button type="button" class="action-btn" data-svc-action="start"   data-svc="${esc(name)}" ${running  ? "disabled" : ""}>${t("phStart")}</button>` +
+          `<button type="button" class="action-btn danger" data-svc-action="stop" data-svc="${esc(name)}" ${stopped ? "disabled" : ""}>${t("phStop")}</button>` +
+          `<button type="button" class="action-btn" data-svc-action="restart" data-svc="${esc(name)}">${t("phRestart")}</button>` +
           `</td>`;
         frag.appendChild(tr);
       }
       tbody.innerHTML = "";
       tbody.appendChild(frag);
-      metaEl.textContent = `${list.length} / ${allServices.length} service(s)`;
+      metaEl.textContent = t("phServiceCount", { shown: list.length, total: allServices.length });
     }
 
     tbody.addEventListener("click", async (e) => {
@@ -389,19 +390,19 @@ export async function mount(root) {
       if (!btn || btn.disabled) return;
       const name   = btn.getAttribute("data-svc");
       const action = btn.getAttribute("data-svc-action");
-      const labels = { start: "Démarrer", stop: "Arrêter", restart: "Redémarrer" };
+      const labels = { start: t("phStart"), stop: t("phStop"), restart: t("phRestart") };
       const ok = await askConfirm(
-        `${labels[action] || action} le service « ${name} » ?`,
-        `${labels[action] || action} le service`
+        t("phConfirmServiceAction", { action: labels[action] || action, name }),
+        t("phServiceActionTitle", { action: labels[action] || action })
       );
       if (!ok) return;
       try {
         const prep = await api.prepare_service_action(name, action);
-        if (!prep?.ok || !prep?.token) { setStatus("Préparation échouée : " + (prep?.error || "?"), "error"); return; }
+        if (!prep?.ok || !prep?.token) { setStatus(t("commonPrepFailed", { err: prep?.error || "?" }), "error"); return; }
         const res = await api.service_action(name, action, prep.token);
-        if (res?.ok) { setStatus(`Service « ${name} » : ${action} effectué.`, "ok"); await loadServices(); }
-        else setStatus("Erreur : " + (res?.error || "?"), "error");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+        if (res?.ok) { setStatus(t("phServiceDone", { name, action: labels[action] || action }), "ok"); await loadServices(); }
+        else setStatus(t("commonError", { err: res?.error || "?" }), "error");
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); }
     });
 
     searchInput.addEventListener("input", renderServices);
@@ -409,10 +410,10 @@ export async function mount(root) {
 
     async function loadServices() {
       loadingEl.hidden = false; emptyEl.hidden = true; tableWrap.hidden = true;
-      metaEl.textContent = ""; setStatus("Chargement des services…");
+      metaEl.textContent = ""; setStatus(t("phLoadingServices"));
       try {
         const res = await api.list_services();
-        if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
+        if (!res?.ok) { setStatus(t("commonError", { err: res?.error || "?" }), "error"); loadingEl.hidden = true; return; }
         // defensive: handle {services:[…]} or {items:[…]}
         const raw = Array.isArray(res.services)
           ? res.services
@@ -422,7 +423,7 @@ export async function mount(root) {
         allServices = raw.map(normService);
         renderServices();
         setStatus("");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); loadingEl.hidden = true; }
     }
 
     await loadServices();
@@ -435,9 +436,9 @@ export async function mount(root) {
       <div class="panel" style="flex-shrink:0">
         <div class="toolbar-row">
           <div class="search-wrap">
-            <input type="search" data-ph="su-search" placeholder="Filtrer par nom ou commande…" autocomplete="off" />
+            <input type="search" data-ph="su-search" placeholder="${esc(t("phStartupSearchPh"))}" autocomplete="off" />
           </div>
-          <button type="button" class="btn accent" data-ph="su-refresh">Actualiser</button>
+          <button type="button" class="btn accent" data-ph="su-refresh">${t("commonRefresh")}</button>
         </div>
         <p class="meta" data-ph="su-meta"></p>
       </div>
@@ -445,17 +446,17 @@ export async function mount(root) {
         <div class="table-wrap" data-ph="su-table-wrap">
           <table class="data">
             <thead><tr>
-              <th>Nom</th>
-              <th>Type</th>
-              <th>Commande</th>
-              <th>Activé</th>
-              <th>Actions</th>
+              <th>${t("commonName")}</th>
+              <th>${t("phType")}</th>
+              <th>${t("phCommand")}</th>
+              <th>${t("phEnabled")}</th>
+              <th>${t("commonActions")}</th>
             </tr></thead>
             <tbody data-ph="su-body"></tbody>
           </table>
         </div>
-        <div data-ph="su-empty"   class="empty-state" hidden>Aucun élément de démarrage.</div>
-        <div data-ph="su-loading" class="empty-state">Chargement…</div>
+        <div data-ph="su-empty"   class="empty-state" hidden>${t("phNoStartup")}</div>
+        <div data-ph="su-loading" class="empty-state">${t("commonLoading")}</div>
       </div>`;
 
     const $ = (s) => el.querySelector(`[data-ph="${s}"]`);
@@ -488,15 +489,15 @@ export async function mount(root) {
           `<td title="${esc(item.name)}">${esc(item.name || "—")}</td>` +
           `<td>${esc(item.type || item.hive || "—")}</td>` +
           `<td class="wrap" title="${esc(item.command || item.path || "")}" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.command || item.path || "—")}</td>` +
-          `<td><span style="color:${enabled ? "var(--ok,#3dd68c)" : "#ff8a95"}">${enabled ? "Oui" : "Non"}</span></td>` +
+          `<td><span style="color:${enabled ? "var(--ok,#3dd68c)" : "#ff8a95"}">${enabled ? t("commonYes") : t("commonNo")}</span></td>` +
           `<td>` +
-          `<button type="button" class="action-btn${enabled ? " danger" : ""}" data-su-toggle data-su-idx="${esc(String(allItems.indexOf(item)))}" ${toggleable ? "" : "disabled"} title="${toggleable ? "" : "Non modifiable"}">${enabled ? "Désactiver" : "Activer"}</button>` +
+          `<button type="button" class="action-btn${enabled ? " danger" : ""}" data-su-toggle data-su-idx="${esc(String(allItems.indexOf(item)))}" ${toggleable ? "" : "disabled"} title="${toggleable ? "" : t("commonNotEditable")}">${enabled ? t("phDisable") : t("phEnable")}</button>` +
           `</td>`;
         frag.appendChild(tr);
       }
       tbody.innerHTML = "";
       tbody.appendChild(frag);
-      metaEl.textContent = `${list.length} / ${allItems.length} entrée(s)`;
+      metaEl.textContent = t("phEntryCount", { shown: list.length, total: allItems.length });
     }
 
     tbody.addEventListener("click", async (e) => {
@@ -507,24 +508,24 @@ export async function mount(root) {
       if (!item) return;
       const enable = !item.enabled;
       const ok = await askConfirm(
-        `${enable ? "Activer" : "Désactiver"} « ${item.name} » au démarrage ?`,
-        `${enable ? "Activer" : "Désactiver"} l'entrée`
+        t("phConfirmStartupToggle", { action: enable ? t("phEnable") : t("phDisable"), name: item.name }),
+        t("phStartupToggleTitle", { action: enable ? t("phEnable") : t("phDisable") })
       );
       if (!ok) return;
       try {
         const prep = await api.prepare_toggle_startup_item({ ...item, enable });
         if (!prep?.ok || !prep?.token) {
-          setStatus("Préparation échouée : " + (prep?.error || "?"), "error");
+          setStatus(t("commonPrepFailed", { err: prep?.error || "?" }), "error");
           return;
         }
         const res = await api.toggle_startup_item({ ...item, enable }, prep.token);
         if (res?.ok) {
-          setStatus(`Entrée « ${item.name} » ${enable ? "activée" : "désactivée"}.`, "ok");
+          setStatus(t("phStartupToggled", { name: item.name, state: enable ? t("phStartupEnabled") : t("phStartupDisabled") }), "ok");
           await loadStartup();
         } else {
-          setStatus("Erreur : " + (res?.error || "?"), "error");
+          setStatus(t("commonError", { err: res?.error || "?" }), "error");
         }
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); }
     });
 
     searchInput.addEventListener("input", renderStartup);
@@ -532,14 +533,14 @@ export async function mount(root) {
 
     async function loadStartup() {
       loadingEl.hidden = false; emptyEl.hidden = true; tableWrap.hidden = true;
-      metaEl.textContent = ""; setStatus("Chargement du démarrage…");
+      metaEl.textContent = ""; setStatus(t("phLoadingStartup"));
       try {
         const res = await api.list_startup();
-        if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
+        if (!res?.ok) { setStatus(t("commonError", { err: res?.error || "?" }), "error"); loadingEl.hidden = true; return; }
         allItems = Array.isArray(res.items) ? res.items : [];
         renderStartup();
         setStatus("");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); loadingEl.hidden = true; }
     }
 
     await loadStartup();
@@ -552,9 +553,9 @@ export async function mount(root) {
       <div class="panel" style="flex-shrink:0">
         <div class="toolbar-row">
           <div class="search-wrap">
-            <input type="search" data-ph="tk-search" placeholder="Filtrer par nom ou chemin…" autocomplete="off" />
+            <input type="search" data-ph="tk-search" placeholder="${esc(t("phTaskSearchPh"))}" autocomplete="off" />
           </div>
-          <button type="button" class="btn accent" data-ph="tk-refresh">Actualiser</button>
+          <button type="button" class="btn accent" data-ph="tk-refresh">${t("commonRefresh")}</button>
         </div>
         <p class="meta" data-ph="tk-meta"></p>
       </div>
@@ -562,17 +563,17 @@ export async function mount(root) {
         <div class="table-wrap" data-ph="tk-table-wrap">
           <table class="data">
             <thead><tr>
-              <th>Nom</th>
-              <th>Chemin</th>
-              <th>Statut</th>
-              <th>Activé</th>
-              <th>Actions</th>
+              <th>${t("commonName")}</th>
+              <th>${t("commonPath")}</th>
+              <th>${t("commonStatus")}</th>
+              <th>${t("phEnabled")}</th>
+              <th>${t("commonActions")}</th>
             </tr></thead>
             <tbody data-ph="tk-body"></tbody>
           </table>
         </div>
-        <div data-ph="tk-empty"   class="empty-state" hidden>Aucune tâche.</div>
-        <div data-ph="tk-loading" class="empty-state">Chargement…</div>
+        <div data-ph="tk-empty"   class="empty-state" hidden>${t("phNoTask")}</div>
+        <div data-ph="tk-loading" class="empty-state">${t("commonLoading")}</div>
       </div>`;
 
     const $ = (s) => el.querySelector(`[data-ph="${s}"]`);
@@ -607,15 +608,15 @@ export async function mount(root) {
           `<td title="${esc(name)}">${esc(name)}</td>` +
           `<td class="wrap" style="font-size:0.76rem;color:var(--muted)">${esc(path)}</td>` +
           `<td>${esc(status)}</td>` +
-          `<td><span style="color:${enabled ? "var(--ok,#3dd68c)" : "#ff8a95"}">${enabled ? "Oui" : "Non"}</span></td>` +
+          `<td><span style="color:${enabled ? "var(--ok,#3dd68c)" : "#ff8a95"}">${enabled ? t("commonYes") : t("commonNo")}</span></td>` +
           `<td>` +
-          `<button type="button" class="action-btn${enabled ? " danger" : ""}" data-tk-toggle data-tk-name="${esc(name)}" data-tk-path="${esc(path)}" data-tk-enabled="${enabled ? "1" : "0"}">${enabled ? "Désactiver" : "Activer"}</button>` +
+          `<button type="button" class="action-btn${enabled ? " danger" : ""}" data-tk-toggle data-tk-name="${esc(name)}" data-tk-path="${esc(path)}" data-tk-enabled="${enabled ? "1" : "0"}">${enabled ? t("phDisable") : t("phEnable")}</button>` +
           `</td>`;
         frag.appendChild(tr);
       }
       tbody.innerHTML = "";
       tbody.appendChild(frag);
-      metaEl.textContent = `${list.length} / ${allTasks.length} tâche(s)`;
+      metaEl.textContent = t("phTaskCount", { shown: list.length, total: allTasks.length });
     }
 
     tbody.addEventListener("click", async (e) => {
@@ -625,21 +626,21 @@ export async function mount(root) {
       const taskPath = btn.getAttribute("data-tk-path");
       const enable   = btn.getAttribute("data-tk-enabled") !== "1";
       const ok = await askConfirm(
-        `${enable ? "Activer" : "Désactiver"} la tâche « ${taskName} » ?`,
-        `${enable ? "Activer" : "Désactiver"} la tâche`
+        t("phConfirmTaskToggle", { action: enable ? t("phEnable") : t("phDisable"), name: taskName }),
+        t("phTaskToggleTitle", { action: enable ? t("phEnable") : t("phDisable") })
       );
       if (!ok) return;
       try {
         const prep = await api.prepare_set_task_enabled(taskName, taskPath, enable);
-        if (!prep?.ok || !prep?.token) { setStatus("Préparation échouée : " + (prep?.error || "?"), "error"); return; }
+        if (!prep?.ok || !prep?.token) { setStatus(t("commonPrepFailed", { err: prep?.error || "?" }), "error"); return; }
         const res = await api.set_task_enabled(taskName, taskPath, enable, prep.token);
         if (res?.ok) {
-          setStatus(`Tâche « ${taskName} » ${enable ? "activée" : "désactivée"}.`, "ok");
+          setStatus(t("phTaskToggled", { name: taskName, state: enable ? t("phTaskEnabled") : t("phTaskDisabled") }), "ok");
           await loadTasks();
         } else {
-          setStatus("Erreur : " + (res?.error || "?"), "error");
+          setStatus(t("commonError", { err: res?.error || "?" }), "error");
         }
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); }
     });
 
     searchInput.addEventListener("input", renderTasks);
@@ -647,10 +648,10 @@ export async function mount(root) {
 
     async function loadTasks() {
       loadingEl.hidden = false; emptyEl.hidden = true; tableWrap.hidden = true;
-      metaEl.textContent = ""; setStatus("Chargement des tâches…");
+      metaEl.textContent = ""; setStatus(t("phLoadingTasks"));
       try {
         const res = await api.list_tasks();
-        if (!res?.ok) { setStatus("Erreur : " + (res?.error || "?"), "error"); loadingEl.hidden = true; return; }
+        if (!res?.ok) { setStatus(t("commonError", { err: res?.error || "?" }), "error"); loadingEl.hidden = true; return; }
         // defensive: handle {tasks:[…]}, {items:[…]}, or array directly
         const raw = Array.isArray(res.tasks)
           ? res.tasks
@@ -662,7 +663,7 @@ export async function mount(root) {
         allTasks = raw.map(normTask);
         renderTasks();
         setStatus("");
-      } catch (err) { setStatus("Erreur : " + String(err), "error"); loadingEl.hidden = true; }
+      } catch (err) { setStatus(t("commonError", { err: String(err) }), "error"); loadingEl.hidden = true; }
     }
 
     await loadTasks();

@@ -8,13 +8,15 @@
  * Bridge: pywebview.api.systemclean.diskmap.*
  */
 import { mountModuleShell, waitNs, esc, pollUntil, unwrapData } from "./_in_hub.js";
+import { t } from "../i18n.js";
 
 async function dmApi() {
   return waitNs("systemclean.diskmap", "list_drives");
 }
 
-function apiErr(res, fallback = "Échec") {
-  if (res == null) return fallback + " (réponse vide)";
+function apiErr(res, fallback) {
+  const fb = fallback || t("commonFailed");
+  if (res == null) return `${fb} (${t("commonEmptyResponse")})`;
   if (typeof res === "string") return res;
   const nested = res.data && typeof res.data === "object" ? res.data : null;
   return (
@@ -22,17 +24,17 @@ function apiErr(res, fallback = "Échec") {
     nested?.error ||
     res.message ||
     nested?.message ||
-    (res.ok === false ? fallback : null) ||
-    fallback
+    (res.ok === false ? fb : null) ||
+    fb
   );
 }
 
 function fmtBytes(n) {
   const b = Number(n) || 0;
-  if (b < 1024) return b + " o";
-  if (b < 1024 ** 2) return (b / 1024).toFixed(0) + " Ko";
-  if (b < 1024 ** 3) return (b / 1024 ** 2).toFixed(1) + " Mo";
-  return (b / 1024 ** 3).toFixed(2) + " Go";
+  if (b < 1024) return `${b} ${t("unitBytes")}`;
+  if (b < 1024 ** 2) return `${(b / 1024).toFixed(0)} ${t("unitKB")}`;
+  if (b < 1024 ** 3) return `${(b / 1024 ** 2).toFixed(1)} ${t("unitMB")}`;
+  return `${(b / 1024 ** 3).toFixed(2)} ${t("unitGB")}`;
 }
 
 function makeAlive(body, gen) {
@@ -47,16 +49,16 @@ function scEl(body, id, alive) {
 
 export async function mount(root) {
   const ctx = mountModuleShell(root, {
-    title: "DiskMap",
-    subtitle: "Treemap · recherche · gros fichiers · vides · doublons · disques",
+    title: t("dmTitle"),
+    subtitle: t("dmSubtitle"),
     segments: [
-      { id: "dm-map", label: "DiskMap" },
-      { id: "dm-search", label: "Recherche" },
-      { id: "dm-large", label: "Gros fichiers" },
-      { id: "dm-empty", label: "Vides" },
-      { id: "dm-dupes", label: "Doublons" },
-      { id: "dm-health", label: "Disques" },
-      { id: "dm-diff", label: "Diff" },
+      { id: "dm-map", label: t("dmSegMap") },
+      { id: "dm-search", label: t("dmSegSearch") },
+      { id: "dm-large", label: t("dmSegLarge") },
+      { id: "dm-empty", label: t("dmSegEmpty") },
+      { id: "dm-dupes", label: t("dmSegDupes") },
+      { id: "dm-health", label: t("dmSegHealth") },
+      { id: "dm-diff", label: t("dmSegDiff") },
     ],
     onSegment: (id, body) => renderSegment(id, body, ctx),
   });
@@ -74,14 +76,14 @@ async function renderSegment(id, body, ctx) {
   }
   const gen = (body._scGen = (body._scGen || 0) + 1);
   const alive = makeAlive(body, gen);
-  body.innerHTML = `<div class="empty-state">Chargement…</div>`;
+  body.innerHTML = `<div class="empty-state">${t("commonLoading")}</div>`;
 
   try {
     const api = await dmApi();
     if (!alive()) return;
     if (!api) {
-      setStatus("API systemclean.diskmap indisponible", "error");
-      body.innerHTML = `<div class="empty-state">Bridge Python indisponible.</div>`;
+      setStatus(t("dmApiUnavailable"), "error");
+      body.innerHTML = `<div class="empty-state">${t("commonBridgeUnavailable")}</div>`;
       return;
     }
     if (id === "dm-map") return mountDiskMap(body, api, setStatus, setProgress, alive);
@@ -151,30 +153,30 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     <div class="dm-map-shell">
       <div class="panel dm-toolbar">
         <div class="toolbar-row">
-          <strong>Carte disque</strong>
+          <strong>${t("dmMapTitleDeep")}</strong>
           <select id="dmDrive" style="min-width:220px"></select>
-          <button type="button" class="btn" id="dmPick">Dossier…</button>
-          <button type="button" class="btn accent" id="dmScan">Analyser</button>
-          <button type="button" class="btn danger" id="dmCancel" disabled>Annuler</button>
+          <button type="button" class="btn" id="dmPick">${t("dmPickFolder")}</button>
+          <button type="button" class="btn accent" id="dmScan">${t("commonAnalyze")}</button>
+          <button type="button" class="btn danger" id="dmCancel" disabled>${t("dmCancel")}</button>
         </div>
         <div class="dm-stats">
-          <div class="stat"><div class="label">Libre</div><div class="value" id="dmFree">—</div></div>
-          <div class="stat"><div class="label">Utilisé</div><div class="value" id="dmUsed">—</div></div>
-          <div class="stat"><div class="label">Analysé</div><div class="value" id="dmScanned">—</div></div>
+          <div class="stat"><div class="label">${t("dmFree")}</div><div class="value" id="dmFree">—</div></div>
+          <div class="stat"><div class="label">${t("dmUsed")}</div><div class="value" id="dmUsed">—</div></div>
+          <div class="stat"><div class="label">${t("dmScanned")}</div><div class="value" id="dmScanned">—</div></div>
         </div>
         <nav class="dm-crumbs" id="dmCrumbs" aria-label="breadcrumb"></nav>
-        <p class="dm-nav-hint">Clic = sélection · double-clic = ouvrir · clic droit = remonter</p>
+        <p class="dm-nav-hint">${t("dmNavHint")}</p>
       </div>
       <div class="dm-workspace">
         <div class="dm-map-wrap">
           <canvas id="treemap" width="800" height="600" aria-label="Treemap"></canvas>
-          <div class="dm-map-hint" id="dmMapHint">Le treemap apparaîtra ici après l'analyse.</div>
+          <div class="dm-map-hint" id="dmMapHint">${t("dmMapHint")}</div>
         </div>
         <aside class="dm-side">
-          <h2>Top éléments</h2>
-          <p class="dm-side-sub" id="dmSideSub">Niveau actuel</p>
+          <h2>${t("dmTopItems")}</h2>
+          <p class="dm-side-sub" id="dmSideSub">${t("dmCurrentLevel")}</p>
           <ul class="dm-top-list" id="dmTopList"></ul>
-          <button type="button" class="btn accent full" id="dmOpen" disabled>Ouvrir dans l'Explorateur</button>
+          <button type="button" class="btn accent full" id="dmOpen" disabled>${t("dmOpenExplorer")}</button>
         </aside>
       </div>
     </div>`;
@@ -344,8 +346,8 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
       ctx.textAlign = "center";
       const msg =
         emptyNode && emptyNode.size > 0
-          ? "Aucun sous-élément affichable à ce niveau"
-          : "Dossier vide ou inaccessible";
+          ? t("dmNoDrawableChild")
+          : t("dmEmptyOrInaccessible");
       ctx.fillText(msg, cssW / 2, cssH / 2);
       ctx.textAlign = "left";
       return;
@@ -467,7 +469,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "crumb" + (idx === state.stack.length - 1 ? " current" : "");
-      btn.textContent = node.name || "racine";
+      btn.textContent = node.name || t("dmRoot");
       if (idx < state.stack.length - 1) {
         btn.addEventListener("click", () => {
           state.stack = state.stack.slice(0, idx + 1);
@@ -483,7 +485,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     const node = currentNode();
     el.topList.innerHTML = "";
     if (!node) {
-      el.sideSub.textContent = "Aucun niveau";
+      el.sideSub.textContent = t("dmNoLevel");
       el.btnOpen.disabled = true;
       return;
     }
@@ -534,17 +536,17 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
       drives.forEach((d) => {
         const opt = document.createElement("option");
         opt.value = d.path;
-        opt.textContent = `${d.label || d.path}  ·  libre ${d.freeLabel || "—"} / ${d.totalLabel || "—"}`;
+        opt.textContent = t("dmDriveOption", { label: d.label || d.path, free: d.freeLabel || "—", total: d.totalLabel || "—" });
         el.driveSelect.appendChild(opt);
       });
       if (!drives.length) {
         const opt = document.createElement("option");
         opt.value = "";
-        opt.textContent = "Aucun lecteur";
+        opt.textContent = t("dmNoDrive");
         el.driveSelect.appendChild(opt);
       }
       state.scanPath = el.driveSelect.value || null;
-      setStatus("Choisissez un lecteur ou un dossier, puis lancez l'analyse.");
+      setStatus(t("dmChooseDriveHint"));
     } catch (err) {
       setStatus(String(err.message || err), "error");
     }
@@ -553,12 +555,12 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
   async function loadResult() {
     const result = unwrapData(await api.get_scan_result());
     if (!result?.ok) {
-      setStatus(result?.error || "Pas de résultat", "error");
+      setStatus(result?.error || t("dmNoResult"), "error");
       return;
     }
     const root = result.root;
     if (!root) {
-      setStatus("Résultat sans arbre", "error");
+      setStatus(t("dmNoTreeResult"), "error");
       return;
     }
     state.root = root;
@@ -569,7 +571,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     el.stUsed.textContent = result.usedLabel || "—";
     el.stScanned.textContent = result.scannedLabel || "—";
     setStatus(
-      `Analyse terminée · ${result.scannedLabel || "—"} · ${result.filesSeen || 0} éléments`,
+      t("dmAnalyzeComplete", { scanned: result.scannedLabel || "—", count: result.filesSeen || 0 }),
       "ok"
     );
     refreshView();
@@ -578,7 +580,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
 
   async function startAnalyze() {
     const path = state.scanPath || el.driveSelect.value;
-    if (!path) return setStatus("Sélectionnez un lecteur ou un dossier.", "error");
+    if (!path) return setStatus(t("commonChooseDriveOrFolder"), "error");
     state.scanPath = path;
     state.cancelled = false;
     state.root = null;
@@ -590,30 +592,30 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     el.stUsed.textContent = "—";
     el.stScanned.textContent = "—";
     el.mapHint.classList.remove("hidden");
-    el.mapHint.textContent = "Analyse en cours…";
+    el.mapHint.textContent = t("scAnalyzing");
     el.topList.innerHTML = "";
     el.crumbs.innerHTML = "";
-    el.sideSub.textContent = "Analyse en cours…";
+    el.sideSub.textContent = t("scAnalyzing");
     el.btnOpen.disabled = true;
     setScanning(true);
-    setStatus("Démarrage de l'analyse…");
+    setStatus(t("dmAnalyzeStarting"));
     try {
       const start = unwrapData(await api.start_scan(path));
       if (!start?.ok) {
         setScanning(false);
-        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
-        return setStatus(start?.error || "Échec démarrage", "error");
+        el.mapHint.textContent = t("dmMapHint");
+        return setStatus(start?.error || t("dmStartFailed"), "error");
       }
       const prog = await pollDm(() => api.get_scan_progress(), setStatus, setProgress);
       setScanning(false);
       if (prog?.error === "Annulé" || prog?.error === "Cancelled" || state.cancelled) {
-        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
-        setStatus("Analyse annulée.", "error");
+        el.mapHint.textContent = t("dmMapHint");
+        setStatus(t("dmAnalyzeCancelled"), "error");
         if (setProgress) setTimeout(() => setProgress(0, ""), 400);
         return;
       }
       if (prog?.error && !prog?.ok) {
-        el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+        el.mapHint.textContent = t("dmMapHint");
         setStatus(prog.error, "error");
         if (setProgress) setTimeout(() => setProgress(0, ""), 400);
         return;
@@ -621,7 +623,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
       await loadResult();
     } catch (err) {
       setScanning(false);
-      el.mapHint.textContent = "Le treemap apparaîtra ici après l'analyse.";
+      el.mapHint.textContent = t("dmMapHint");
       setStatus(String(err.message || err), "error");
     }
   }
@@ -631,20 +633,20 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     if (!state.scanning) return;
     state.cancelled = true;
     el.btnCancel.disabled = true;
-    setStatus("Annulation demandée…");
+    setStatus(t("dmCancelRequested"));
     try {
       await api.cancel_scan();
     } catch (_) {}
   });
   el.btnPick.addEventListener("click", async () => {
-    setStatus("Ouverture du sélecteur de dossier…");
+    setStatus(t("commonPickerOpening"));
     try {
       const res = unwrapData(await api.pick_folder());
       if (res?.ok === false) {
-        return setStatus(res.error || "Sélection annulée", "error");
+        return setStatus(res.error || t("dmSelectionCancelled"), "error");
       }
       const path = res?.path || null;
-      if (!path) return setStatus("Aucun dossier choisi.");
+      if (!path) return setStatus(t("commonNoFolderPicked"));
       state.scanPath = path;
       let found = false;
       for (const opt of el.driveSelect.options) {
@@ -661,9 +663,9 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
         el.driveSelect.appendChild(opt);
         el.driveSelect.value = path;
       }
-      setStatus("Dossier choisi : " + path, "ok");
+      setStatus(t("commonFolderPicked", { path }), "ok");
     } catch (e) {
-      setStatus("Sélecteur indisponible : " + String(e.message || e), "error");
+      setStatus(t("commonPickerUnavailable", { err: String(e.message || e) }), "error");
     }
   });
   el.driveSelect.addEventListener("change", () => {
@@ -674,7 +676,7 @@ async function mountDiskMap(body, api, setStatus, setProgress) {
     if (!target || !target.path) return;
     try {
       const res = unwrapData(await api.open_path(target.path));
-      if (!res?.ok) setStatus(res?.error || "Ouverture impossible", "error");
+      if (!res?.ok) setStatus(res?.error || t("dmOpenImpossible"), "error");
     } catch (err) {
       setStatus(String(err.message || err), "error");
     }
@@ -743,23 +745,23 @@ async function mountDmSearch(body, api, setStatus, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <div class="search-wrap"><input type="text" id="srRoot" placeholder="Racine (C:\\)" /></div>
-          <div class="search-wrap"><input type="search" id="srQ" placeholder="Requête…" /></div>
-          <button type="button" class="btn accent" id="srGo">Rechercher</button>
+          <div class="search-wrap"><input type="text" id="srRoot" placeholder="${esc(t("dmSearchRootPh"))}" /></div>
+          <div class="search-wrap"><input type="search" id="srQ" placeholder="${esc(t("dmQueryPh"))}" /></div>
+          <button type="button" class="btn accent" id="srGo">${t("commonSearch")}</button>
         </div>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:220px">
-        <div class="table-wrap"><table class="data"><thead><tr><th>Fichier</th><th>Chemin</th><th></th></tr></thead><tbody id="srBody"></tbody></table></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>${t("dmFile")}</th><th>${t("commonPath")}</th><th></th></tr></thead><tbody id="srBody"></tbody></table></div>
       </div>
     </div>`;
 
   document.getElementById("srGo").onclick = async () => {
     const root = document.getElementById("srRoot").value.trim() || "C:\\";
     const query = document.getElementById("srQ").value.trim();
-    if (!query) return setStatus("Requête requise.", "error");
-    setStatus("Recherche…");
+    if (!query) return setStatus(t("dmQueryRequired"), "error");
+    setStatus(t("commonSearching"));
     const start = unwrapData(await api.start_search(root, query, {}));
-    if (!start?.ok) return setStatus(start?.error || "Échec", "error");
+    if (!start?.ok) return setStatus(start?.error || t("commonFailed"), "error");
     const prog = await pollDm(() => api.get_search_progress(), setStatus, setProgress);
     const items = dmFilesFromProgress(prog);
     document.getElementById("srBody").innerHTML = (items || [])
@@ -767,10 +769,10 @@ async function mountDmSearch(body, api, setStatus, setProgress) {
       .map(
         (f) =>
           `<tr><td>${esc(f.name || f.Name || "")}</td><td class="wrap">${esc(f.path || f.Path || "")}</td>
-          <td><button type="button" class="action-btn" data-open="${esc(f.path || f.Path || "")}">Ouvrir</button></td></tr>`
+          <td><button type="button" class="action-btn" data-open="${esc(f.path || f.Path || "")}">${t("commonOpen")}</button></td></tr>`
       )
-      .join("") || `<tr><td colspan="3" class="empty-state">Aucun résultat</td></tr>`;
-    setStatus(`${(items || []).length} résultat(s)`, "ok");
+      .join("") || `<tr><td colspan="3" class="empty-state">${t("commonNoResult")}</td></tr>`;
+    setStatus(t("dmResultsCount", { n: (items || []).length }), "ok");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
   body.addEventListener("click", (ev) => {
@@ -784,15 +786,15 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <div class="search-wrap"><input type="text" id="lgRoot" placeholder="Racine" value="C:\\" /></div>
-          <button type="button" class="btn" id="lgPick">Dossier…</button>
-          <input type="number" id="lgMin" value="50" title="Min Mo" style="width:90px" />
-          <button type="button" class="btn accent" id="lgGo">Scanner</button>
+          <div class="search-wrap"><input type="text" id="lgRoot" placeholder="${esc(t("dmLargeRootPh"))}" value="C:\\" /></div>
+          <button type="button" class="btn" id="lgPick">${t("dmPickFolder")}</button>
+          <input type="number" id="lgMin" value="50" title="${esc(t("dmMinMbTitle"))}" style="width:90px" />
+          <button type="button" class="btn accent" id="lgGo">${t("commonScan")}</button>
         </div>
-        <p class="meta">Scan long sur C:\\ — préférez un dossier ciblé. La barre de progression reste visible pendant le parcours.</p>
+        <p class="meta">${t("dmLargeHint")}</p>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:220px">
-        <div class="table-wrap"><table class="data"><thead><tr><th>Fichier</th><th>Taille</th><th></th></tr></thead><tbody id="lgBody"></tbody></table></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>${t("dmFile")}</th><th>${t("commonSize")}</th><th></th></tr></thead><tbody id="lgBody"></tbody></table></div>
       </div>
     </div>`;
 
@@ -802,7 +804,7 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
       if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
       const path = res?.path || null;
       if (path) document.getElementById("lgRoot").value = path;
-      else setStatus("Aucun dossier choisi.");
+      else setStatus(t("commonNoFolderPicked"));
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -811,9 +813,9 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
   document.getElementById("lgGo").onclick = async () => {
     const root = document.getElementById("lgRoot").value.trim() || "C:\\";
     const minMb = Number(document.getElementById("lgMin").value) || 50;
-    setStatus("Scan gros fichiers…");
+    setStatus(t("dmScanningLarge"));
     const start = unwrapData(await api.start_scan_large(root, 80, minMb));
-    if (!start?.ok) return setStatus(start?.error || "Échec", "error");
+    if (!start?.ok) return setStatus(start?.error || t("commonFailed"), "error");
     const prog = await pollDm(() => api.get_large_progress(), setStatus, setProgress);
     if (prog.error) return setStatus(prog.error, "error");
     const files = dmFilesFromProgress(prog);
@@ -823,11 +825,11 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
           `<tr><td class="wrap">${esc(f.path || f.Path || f.name || "")}</td><td>${esc(
             fmtBytes(f.size || f.Size || 0)
           )}</td>
-          <td><button type="button" class="action-btn" data-open="${esc(f.path || f.Path || "")}">Ouvrir</button>
-          <button type="button" class="action-btn danger" data-del="${esc(f.path || f.Path || "")}">Suppr.</button></td></tr>`
+          <td><button type="button" class="action-btn" data-open="${esc(f.path || f.Path || "")}">${t("commonOpen")}</button>
+          <button type="button" class="action-btn danger" data-del="${esc(f.path || f.Path || "")}">${t("commonDelete")}</button></td></tr>`
       )
-      .join("") || `<tr><td colspan="3" class="empty-state">Aucun fichier</td></tr>`;
-    setStatus(`${(files || []).length} fichier(s)`, "ok");
+      .join("") || `<tr><td colspan="3" class="empty-state">${t("commonNoResult")}</td></tr>`;
+    setStatus(t("dmFilesCount", { n: (files || []).length }), "ok");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
@@ -837,11 +839,11 @@ async function mountDmLarge(body, api, setStatus, askConfirm, setProgress) {
     const del = ev.target.closest("[data-del]");
     if (!del) return;
     const path = del.getAttribute("data-del");
-    if (!(await askConfirm(`Supprimer « ${path} » ?`))) return;
+    if (!(await askConfirm(t("dmConfirmDeletePath", { path })))) return;
     const prep = await api.prepare_delete_large_file(path);
-    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    if (!prep?.ok) return setStatus(prep?.error || t("commonRefused"), "error");
     const r = await api.delete_large_file(path, prep.token);
-    setStatus(r?.ok ? "Supprimé." : r?.error || "Échec", r?.ok ? "ok" : "error");
+    setStatus(r?.ok ? t("dmDeleted") : r?.error || t("commonFailed"), r?.ok ? "ok" : "error");
   });
 }
 
@@ -851,12 +853,12 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
       <div class="panel">
         <div class="toolbar-row">
           <div class="search-wrap"><input type="text" id="emRoot" value="C:\\" /></div>
-          <button type="button" class="btn" id="emPick">Dossier…</button>
-          <button type="button" class="btn accent" id="emGo">Chercher dossiers vides</button>
+          <button type="button" class="btn" id="emPick">${t("dmPickFolder")}</button>
+          <button type="button" class="btn accent" id="emGo">${t("dmFindEmpty")}</button>
         </div>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:200px">
-        <div class="table-wrap"><table class="data"><thead><tr><th>Dossier</th><th></th></tr></thead><tbody id="emBody"></tbody></table></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>${t("dmFolder")}</th><th></th></tr></thead><tbody id="emBody"></tbody></table></div>
       </div>
     </div>`;
 
@@ -866,7 +868,7 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
       if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
       const path = res?.path || null;
       if (path) document.getElementById("emRoot").value = path;
-      else setStatus("Aucun dossier choisi.");
+      else setStatus(t("commonNoFolderPicked"));
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -874,9 +876,9 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
 
   document.getElementById("emGo").onclick = async () => {
     const root = document.getElementById("emRoot").value.trim() || "C:\\";
-    setStatus("Recherche dossiers vides…");
+    setStatus(t("dmSearchingEmpty"));
     const start = unwrapData(await api.start_find_empty(root));
-    if (!start?.ok) return setStatus(start?.error || "Échec", "error");
+    if (!start?.ok) return setStatus(start?.error || t("commonFailed"), "error");
     const prog = await pollDm(() => api.get_empty_progress(), setStatus, setProgress);
     if (prog.error) return setStatus(prog.error, "error");
     const folders = dmFilesFromProgress(prog);
@@ -885,12 +887,12 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
         (f) => {
           const p = typeof f === "string" ? f : f.path || f.Path || "";
           return `<tr><td class="wrap">${esc(p)}</td><td>
-            <button type="button" class="action-btn" data-open="${esc(p)}">Ouvrir</button>
-            <button type="button" class="action-btn danger" data-del="${esc(p)}">Suppr.</button></td></tr>`;
+            <button type="button" class="action-btn" data-open="${esc(p)}">${t("commonOpen")}</button>
+            <button type="button" class="action-btn danger" data-del="${esc(p)}">${t("commonDelete")}</button></td></tr>`;
         }
       )
-      .join("") || `<tr><td colspan="2" class="empty-state">Aucun dossier vide</td></tr>`;
-    setStatus(`${(folders || []).length} dossier(s)`, "ok");
+      .join("") || `<tr><td colspan="2" class="empty-state">${t("dmNoEmptyFolder")}</td></tr>`;
+    setStatus(t("dmFoldersCount", { n: (folders || []).length }), "ok");
     if (setProgress) setTimeout(() => setProgress(0, ""), 600);
   };
 
@@ -900,11 +902,11 @@ async function mountDmEmpty(body, api, setStatus, askConfirm, setProgress) {
     const del = ev.target.closest("[data-del]");
     if (!del) return;
     const path = del.getAttribute("data-del");
-    if (!(await askConfirm(`Supprimer le dossier vide « ${path} » ?`))) return;
+    if (!(await askConfirm(t("dmConfirmDeleteEmptyFolder", { path })))) return;
     const prep = await api.prepare_delete_empty_folder(path);
-    if (!prep?.ok) return setStatus(prep?.error || "Refusé", "error");
+    if (!prep?.ok) return setStatus(prep?.error || t("commonRefused"), "error");
     const r = await api.delete_empty_folder(path, prep.token);
-    setStatus(r?.ok ? "Supprimé." : r?.error || "Échec", r?.ok ? "ok" : "error");
+    setStatus(r?.ok ? t("dmDeleted") : r?.error || t("commonFailed"), r?.ok ? "ok" : "error");
   });
 }
 
@@ -913,13 +915,13 @@ async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <div class="search-wrap"><input type="text" id="duRoot" placeholder="Dossier" /></div>
-          <button type="button" class="btn" id="duPick">Dossier…</button>
-          <button type="button" class="btn accent" id="duGo">Scanner doublons</button>
+          <div class="search-wrap"><input type="text" id="duRoot" placeholder="${esc(t("dmFolder"))}" /></div>
+          <button type="button" class="btn" id="duPick">${t("dmPickFolder")}</button>
+          <button type="button" class="btn accent" id="duGo">${t("dmScanDupes")}</button>
         </div>
       </div>
       <div class="panel flex-fill" style="padding:0;min-height:200px">
-        <div class="table-wrap"><table class="data"><thead><tr><th>Groupe</th><th>Fichiers</th></tr></thead><tbody id="duBody"></tbody></table></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>${t("dmGroup")}</th><th>${t("dmFiles")}</th></tr></thead><tbody id="duBody"></tbody></table></div>
       </div>
     </div>`;
 
@@ -929,7 +931,7 @@ async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
       if (res?.ok === false) return setStatus(apiErr(res, "pick_folder"), "error");
       const path = res?.path || null;
       if (path) document.getElementById("duRoot").value = path;
-      else setStatus("Aucun dossier choisi.");
+      else setStatus(t("commonNoFolderPicked"));
     } catch (e) {
       setStatus(String(e.message || e), "error");
     }
@@ -937,10 +939,10 @@ async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
 
   document.getElementById("duGo").onclick = async () => {
     const folder = document.getElementById("duRoot").value.trim();
-    if (!folder) return setStatus("Dossier requis.", "error");
-    setStatus("Scan doublons…");
+    if (!folder) return setStatus(t("dmFolderRequired"), "error");
+    setStatus(t("dmScanningDupes"));
     const start = unwrapData(await api.start_scan_duplicates(folder));
-    if (!start?.ok) return setStatus(start?.error || "Échec", "error");
+    if (!start?.ok) return setStatus(start?.error || t("commonFailed"), "error");
     const prog = await pollDm(() => api.get_dup_progress(), setStatus, setProgress);
     if (prog.error) return setStatus(prog.error, "error");
     const groups = dmFilesFromProgress(prog);
@@ -952,8 +954,8 @@ async function mountDmDupes(body, api, setStatus, askConfirm, setProgress) {
           (paths || []).map((p) => (typeof p === "string" ? p : p.path)).join("\n")
         )}</td></tr>`;
       })
-      .join("") || `<tr><td colspan="2" class="empty-state">Aucun doublon</td></tr>`;
-    setStatus(`${(groups || []).length} groupe(s)`, "ok");
+      .join("") || `<tr><td colspan="2" class="empty-state">${t("dmNoDupe")}</td></tr>`;
+    setStatus(t("dmGroupsCount", { n: (groups || []).length }), "ok");
   };
 }
 
@@ -962,17 +964,17 @@ async function mountDmHealth(body, api, setStatus) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <strong>Santé disques</strong>
-          <button type="button" class="btn accent" id="dhGo" style="margin-left:auto">Actualiser</button>
+          <strong>${t("dmDiskHealthTitle")}</strong>
+          <button type="button" class="btn accent" id="dhGo" style="margin-left:auto">${t("commonRefresh")}</button>
         </div>
         <pre class="meta" id="dhOut" style="white-space:pre-wrap;margin-top:10px;max-height:420px;overflow:auto"></pre>
       </div>
     </div>`;
   document.getElementById("dhGo").onclick = async () => {
-    setStatus("Lecture disques…");
+    setStatus(t("dmReadingDisks"));
     const res = await api.get_disk_info();
     document.getElementById("dhOut").textContent = JSON.stringify(res, null, 2).slice(0, 10000);
-    setStatus(res?.ok === false ? res.error || "Échec" : "Disques OK.", res?.ok === false ? "error" : "ok");
+    setStatus(res?.ok === false ? res.error || t("commonFailed") : t("dmDisksOk"), res?.ok === false ? "error" : "ok");
   };
   document.getElementById("dhGo").click();
 }
@@ -982,8 +984,8 @@ async function mountDmDiff(body, api, setStatus) {
     <div class="hub-inhub-scroll">
       <div class="panel">
         <div class="toolbar-row">
-          <button type="button" class="btn accent" id="dfSnap">Prendre snapshot</button>
-          <button type="button" class="btn" id="dfCmp">Comparer</button>
+          <button type="button" class="btn accent" id="dfSnap">${t("dmTakeSnapshot")}</button>
+          <button type="button" class="btn" id="dfCmp">${t("dmCompare")}</button>
         </div>
         <pre class="meta" id="dfOut" style="white-space:pre-wrap;margin-top:10px;max-height:420px;overflow:auto"></pre>
       </div>
@@ -991,11 +993,11 @@ async function mountDmDiff(body, api, setStatus) {
   document.getElementById("dfSnap").onclick = async () => {
     const res = await api.take_snapshot();
     document.getElementById("dfOut").textContent = JSON.stringify(res, null, 2).slice(0, 8000);
-    setStatus(res?.ok === false ? res.error || "Échec" : "Snapshot pris.", res?.ok === false ? "error" : "ok");
+    setStatus(res?.ok === false ? res.error || t("commonFailed") : t("dmSnapshotTaken"), res?.ok === false ? "error" : "ok");
   };
   document.getElementById("dfCmp").onclick = async () => {
     const res = await api.compare_snapshot();
     document.getElementById("dfOut").textContent = JSON.stringify(res, null, 2).slice(0, 8000);
-    setStatus(res?.ok === false ? res.error || "Échec" : "Comparaison OK.", res?.ok === false ? "error" : "ok");
+    setStatus(res?.ok === false ? res.error || t("commonFailed") : t("dmCompareOk"), res?.ok === false ? "error" : "ok");
   };
 }
