@@ -47,7 +47,7 @@ Download: [Hub-Systeme Releases](https://github.com/Mr-Aurevo-X/Hub-Systeme/rele
 Lancer.cmd
 ```
 
-Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed. SmartScreen reputation warning, not an AV verdict.
+Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed (no paid publisher cert). That is a **SmartScreen** reputation warning, not an antivirus verdict.
 
 HWND title: `PC Command | System` / `[Module]`. Isolation: `ISOLATION.md`. License: `LICENSE` (PolyForm Noncommercial 1.0.0) — keep copyright & About/legal text.
 

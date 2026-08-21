@@ -47,7 +47,7 @@ Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Sys
 Lancer.cmd
 ```
 
-Windows peut afficher « potentiellement dangereux » : binaires **non signés** Authenticode. Avertissement SmartScreen, pas un verdict antivirus.
+Windows peut afficher « potentiellement dangereux » : binaires **non signés** Authenticode (pas de certificat éditeur payant). C’est un avertissement **SmartScreen** (réputation), pas un verdict antivirus.
 
 Titre HWND : `PC Command | System` / `[Module]`. Isolation : `ISOLATION.md`. Licence : `LICENSE` (PolyForm Noncommercial 1.0.0) — conserver copyright & textes À propos.
 
