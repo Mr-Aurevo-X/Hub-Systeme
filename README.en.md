@@ -2,8 +2,8 @@
 
 # PC Command | System
 
-**System** hub — cleanup, memory, processes, uninstall. One elevated window, live Home, native modules.  
-**Free for life** · **as local as possible** · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
+**System** hub — cleanup, memory, processes, uninstall. One admin window, live Home.  
+**Free for life** · **as local as possible** · **Mr-Aurevo-X**
 
 ## Preview
 
@@ -15,7 +15,7 @@
 
 | Module | Role |
 |--------|------|
-| **SystemClean** | Traces, caches, recycle bin, tweaks — confirmation before action |
+| **SystemClean** | Traces, caches, recycle bin — confirmation before action |
 | DiskMap | Disk map / usage |
 | RamCleaner | Memory · trim · end task |
 | ProcessHub | Live processes |
@@ -25,45 +25,39 @@
 
 ## Why this hub
 
-- **Free for life** — no subscription, no account
-- **As local as possible** — modules run on your machine ; **no module network egress**
-- Only suite option: GitHub version check — **opt-out** in About
-- Confirmation before any system-touching action
-- FR | EN · read-only Home (CPU · RAM · GPU · disks)
+- Free for life — no subscription, no account
+- As local as possible — **no module network egress**
+- GitHub update check **opt-out** in About
+- Confirmation before any action that changes the system
+- UI FR | EN
+- Read-only Home (CPU · RAM · GPU · disks)
 
 ## On your PC
 
 | What | Where |
 |------|-------|
-| **App** (`Launch-Hub-Systeme.zip`) | Portable folder — extract, run `Launch-Hub-Systeme.exe` |
-| Metadata / version | `%LOCALAPPDATA%\PCCommand\` |
-| Prefs (language, updates…) | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared across apps) |
+| **App** | Extract `Launch-Hub-Systeme.zip`, run `Launch-Hub-Systeme.exe` |
+| Metadata | `%LOCALAPPDATA%\PCCommand\` |
+| Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
 
-Download: [Hub-Systeme Releases](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · tag **v2.0.0**
+[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · **v2.0.0**
 
 ## Launch
 
-1. Download the zip from the official **Release**  
+1. Download the zip from the Releases page above  
 2. Extract anywhere  
-3. Run `Launch-Hub-Systeme.exe` (UAC admin)
+3. Run `Launch-Hub-Systeme.exe` (Windows will ask for admin)
 
-Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed. That is **SmartScreen** (reputation), not an antivirus verdict.
+Windows may show a warning: binaries are **not signed**. That is **SmartScreen**, not an antivirus “virus” verdict.
 
-## Disclaimer — official builds only
+## Official version only
 
-The **only** sources and binaries I stand behind are those published at:
+The only build I stand behind:
 
-**https://github.com/Mr-Aurevo-X/Hub-Systeme** (this repository’s Releases / tags).
+**https://github.com/Mr-Aurevo-X/Hub-Systeme**
 
-Any **fork**, copy, rebuild, or third-party modified redistribution is **not** an official Mr-Aurevo-X build, is **not** reviewed, and may include changes (including URLs or network behavior) **outside my control**.
-
-I accept **no liability** for damage, data loss, or incidents arising from unofficial builds, misuse, or a compromised machine.
-
-Software provided **as is**, without warranty — see `LICENSE` (PolyForm Noncommercial 1.0.0). Use at your own risk.
-
-## Legal
-
-`PRIVACY.md` · `LICENSE`
+A fork or modified copy elsewhere is **not** my version — I am not responsible for it.  
+Software **as is**, without warranty — see `LICENSE` and `PRIVACY.md`.
 
 ## Support (optional)
 

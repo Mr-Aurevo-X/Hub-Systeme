@@ -2,8 +2,8 @@
 
 # PC Command | System
 
-Hub **Système** — ménage, mémoire, processus, désinstall. Une seule fenêtre admin, Accueil live, modules natifs.  
-**Gratuit à vie** · **autant local que possible** · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
+Hub **Système** — ménage, mémoire, processus, désinstallation. Une fenêtre admin, Accueil live.  
+**Gratuit à vie** · **autant local que possible** · **Mr-Aurevo-X**
 
 ## Aperçu
 
@@ -15,55 +15,49 @@ Hub **Système** — ménage, mémoire, processus, désinstall. Une seule fenêt
 
 | Module | Rôle |
 |--------|------|
-| **SystemClean** | Traces, caches, corbeille, optimisations — confirmation avant action |
+| **SystemClean** | Traces, caches, corbeille — confirmation avant action |
 | DiskMap | Carte disques / occupation |
 | RamCleaner | Mémoire · trim · fin de tâche |
-| ProcessHub | Processus live |
+| ProcessHub | Processus en direct |
 | UninstX | Désinstallation propre |
 | SysInspect | Inspection système |
 | Admin léger | Actions admin ciblées |
 
 ## Pourquoi ce hub
 
-- **Gratuit à vie** — pas d’abonnement, pas de compte
-- **Autant local que possible** — les modules tournent sur ta machine ; **aucune sortie réseau des modules**
-- Seule option « suite » : vérif. de version GitHub **désactivable** dans À propos
-- Confirmation avant toute action qui touche le système
-- FR | EN · Accueil lecture seule (CPU · RAM · GPU · disques)
+- Gratuit à vie — pas d’abonnement, pas de compte
+- Autant local que possible — **aucune sortie réseau des modules**
+- Vérif. de mise à jour GitHub **désactivable** dans À propos
+- Confirmation avant toute action qui change le système
+- Interface FR | EN
+- Accueil en lecture seule (CPU · RAM · GPU · disques)
 
 ## Sur ton PC
 
 | Quoi | Où |
 |------|-----|
-| **App** (`Launch-Hub-Systeme.zip`) | Dossier portable — extrais, lance `Launch-Hub-Systeme.exe` |
-| Métadonnées / version | `%LOCALAPPDATA%\PCCommand\` |
-| Préférences (langue, maj…) | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé entre apps) |
+| **App** | Extrais `Launch-Hub-Systeme.zip`, lance `Launch-Hub-Systeme.exe` |
+| Métadonnées | `%LOCALAPPDATA%\PCCommand\` |
+| Préférences | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
 
-Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · tag **v2.0.0**
+[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · **v2.0.0**
 
 ## Lancer
 
-1. Télécharge le zip de la **Release** officielle  
+1. Télécharge le zip sur la page Releases ci-dessus  
 2. Extrais où tu veux  
-3. Lance `Launch-Hub-Systeme.exe` (UAC admin)
+3. Lance `Launch-Hub-Systeme.exe` (Windows demandera l’admin)
 
-Windows peut afficher « potentiellement dangereux » : binaires **non signés** Authenticode. C’est **SmartScreen** (réputation), pas un verdict antivirus.
+Windows peut afficher un avertissement : les binaires ne sont **pas signés**. C’est **SmartScreen**, pas un antivirus qui dit « virus ».
 
-## Avertissement — builds officiels uniquement
+## Version officielle uniquement
 
-Les binaires et sources **faisant foi** sont uniquement ceux publiés sur :
+La seule version que je cautionne :
 
-**https://github.com/Mr-Aurevo-X/Hub-Systeme** (Releases / tags de ce dépôt).
+**https://github.com/Mr-Aurevo-X/Hub-Systeme**
 
-Tout **fork**, copie, rebuild ou redistribution **modifiée** par un tiers n’est **pas** une version Mr-Aurevo-X, n’est **pas** vérifiée, et peut contenir des changements (y compris des URL ou comportements réseau) **hors de mon contrôle**.
-
-Je décline toute responsabilité quant aux dommages, pertes de données ou incidents liés à une version **non officielle**, à une mauvaise utilisation, ou à un environnement compromis.
-
-Logiciel fourni **tel quel**, sans garantie — voir `LICENSE` (PolyForm Noncommercial 1.0.0). Utilisation à tes risques.
-
-## Legal
-
-`PRIVACY.md` · `LICENSE`
+Un fork ou une copie modifiée ailleurs **n’est pas** ma version — je n’en suis pas responsable.  
+Logiciel **tel quel**, sans garantie — détails dans `LICENSE` et `PRIVACY.md`.
 
 ## Soutien (optionnel)
 
