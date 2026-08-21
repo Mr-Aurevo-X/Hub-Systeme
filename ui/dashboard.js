@@ -16,8 +16,14 @@ const FALLBACK_MODULES = [
   {
     id: "systemclean",
     label: "SystemClean",
-    desc: "WinCleaner · DiskMap — nettoyage, disque, traces, debloat",
+    desc: "WinCleaner — nettoyage, traces, debloat, santé",
     ico: "⌫",
+  },
+  {
+    id: "diskmap",
+    label: "DiskMap",
+    desc: "Treemap, recherche, gros fichiers, vides, doublons",
+    ico: "▤",
   },
   {
     id: "ramcleaner",

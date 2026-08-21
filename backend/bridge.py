@@ -1161,7 +1161,7 @@ class SystemCleanApi(_GateMixin):
 
     def __init__(self, gate: ConfirmGate) -> None:
         super().__init__(gate)
-        self.apps = ["WinCleaner", "DiskMap"]
+        self.apps = ["WinCleaner", "DiskMap"]  # in-process namespaces (UI: SystemClean + DiskMap sidebar)
         self.wincleaner = WinCleanerHostApi(gate)
         self.diskmap = DiskMapHostApi(gate=gate)
 
@@ -1349,8 +1349,14 @@ class Api(WindowChromeMixin):
             {
                 "id": "systemclean",
                 "label": "SystemClean",
-                "desc": "Cleanup, disque (WinCleaner · DiskMap)",
-                "apps": self.systemclean.apps,
+                "desc": "WinCleaner — nettoyage, traces, debloat, santé",
+                "apps": ["WinCleaner"],
+            },
+            {
+                "id": "diskmap",
+                "label": "DiskMap",
+                "desc": "Treemap, recherche, gros fichiers, vides, doublons",
+                "apps": ["DiskMap"],
             },
             {
                 "id": "ramcleaner",
