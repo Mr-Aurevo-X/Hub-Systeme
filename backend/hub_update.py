@@ -84,6 +84,102 @@ def localappdata_root() -> Path:
     return Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local"))
 
 
+def user_settings_path() -> Path:
+    return localappdata_root() / "Mr-Aurevo-X" / "user-settings.json"
+
+
+def read_user_settings() -> dict[str, Any]:
+    path = user_settings_path()
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_user_settings_merge(patch: dict[str, Any]) -> dict[str, Any]:
+    """Merge keys into %LOCALAPPDATA%/Mr-Aurevo-X/user-settings.json (preserves accent/language)."""
+    current = read_user_settings()
+    current.update(patch or {})
+    path = user_settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return current
+
+
+def is_github_update_check_enabled() -> bool:
+    """Default True — opt-out via user-settings.checkGithubUpdates = false."""
+    val = read_user_settings().get("checkGithubUpdates")
+    if val is None:
+        return True
+    return bool(val)
+
+
+def set_github_update_check(enabled: bool) -> dict[str, Any]:
+    write_user_settings_merge({"checkGithubUpdates": bool(enabled)})
+    return {
+        "ok": True,
+        "checkGithubUpdates": bool(enabled),
+        "path": str(user_settings_path()),
+    }
+
+
+def about_local_paths(app_dir: Path, *, hub_id: str | None = None) -> dict[str, Any]:
+    """Labeled absolute paths for About — uninstall / manual cleanup guidance.
+
+    Never expose monorepo / SoT / clone paths (even when running via Lancer.cmd).
+    ``app_dir`` is kept for API compatibility; it is not shown in the UI.
+    """
+    _ = app_dir  # API compat — never surface SoT/clone in About
+    hub_key = normalize_hub_id(hub_id or "")
+    entries: list[dict[str, Any]] = []
+
+    # Install path only for shipped / frozen builds (exe parent).
+    if getattr(sys, "frozen", False):
+        app_path = Path(sys.executable).resolve().parent
+        entries.append(
+            {
+                "id": "app",
+                "label": "Install (dossier de l’exe)",
+                "path": str(app_path),
+                "hint": "Dossier portable Launch-Hub-*.exe — supprimer ce dossier pour désinstaller.",
+            }
+        )
+
+    entries.append(
+        {
+            "id": "version",
+            "label": "Métadonnées / version",
+            "path": str(default_install_dir()),
+            "hint": r"%LOCALAPPDATA%\PCCommand — version.json et métadonnées suite.",
+        }
+    )
+    entries.append(
+        {
+            "id": "settings",
+            "label": "Préférences (accent, langue, vérif. maj)",
+            "path": str(user_settings_path()),
+            "hint": "Fichier partagé Mr-Aurevo-X — à garder si d’autres apps l’utilisent.",
+        }
+    )
+
+    if hub_key == "reseau":
+        roadway = localappdata_root() / "Mr-Aurevo-X" / "RoadWay-X"
+        entries.append(
+            {
+                "id": "data-roadway",
+                "label": "Données Traffic",
+                "path": str(roadway),
+                "hint": "Caches / alertes Traffic — optionnel si tu n’utilises plus le module.",
+                "optional": True,
+            }
+        )
+
+    return {"ok": True, "hubId": hub_key or None, "paths": entries}
+
+
 def hub_install_dir_candidates() -> list[Path]:
     root = localappdata_root()
     names = [HUB_INSTALL_DIR, *_LEGACY_HUB_INSTALL_DIRS]
@@ -259,6 +355,20 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
             "local": local,
         }
 
+    if not is_github_update_check_enabled():
+        return {
+            "ok": True,
+            "updateAvailable": False,
+            "skipped": True,
+            "reason": "checkGithubUpdates disabled",
+            "local": local,
+            "hubId": hub_key,
+            "repo": hub_repo,
+            "checkGithubUpdates": False,
+            "message": None,
+            "error": None,
+        }
+
     last_err = None
     try:
         raw = _api_latest_release(hub_repo)
@@ -279,6 +389,7 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
             "error": last_err or "no release",
             "local": local,
             "hubId": hub_key,
+            "checkGithubUpdates": True,
         }
 
     remote = str(chosen.get("remote") or "")
@@ -294,6 +405,7 @@ def check_hub_release(hub_id: str, app_dir: Path) -> dict[str, Any]:
         "asset": chosen.get("asset"),
         "hasZip": chosen.get("hasZip"),
         "releaseUrl": chosen.get("releaseUrl"),
+        "checkGithubUpdates": True,
         "message": (
             f"Nouvelle version {remote} (installée : {local or '?'})"
             if available

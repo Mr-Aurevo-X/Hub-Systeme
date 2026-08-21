@@ -4,23 +4,34 @@
  * Author: Mr-Aurevo-X | https://github.com/Mr-Aurevo-X
  */
 /**
- * Hub Accueil — Filament Void Glow (dash-prop · gauge-card).
+ * Hub Accueil System — Filament Void Glow (dash-prop · gauge-card).
  * Legacy cyber Accueil (Throughput / density-map) removed.
+ * Accueil perso CPU/RAM/GPU — pas de kicker « · Void Glow ».
  */
-const HUB_LABEL = "System";
-const HUB_BLURB = "PC Command — lecture seule · zéro mutator";
+import { locale, t } from "./i18n.js";
+
 const SHOW_VIEW = () => window.HubSysteme?.showView || window.HubShell?.showView;
 
-const FALLBACK_MODULES = [
-  { id: "systemclean", label: "SystemClean", desc: "WinCleaner — nettoyage, traces, debloat, santé", ico: "⌫" },
-  { id: "diskmap", label: "DiskMap", desc: "Treemap, recherche, gros fichiers, vides, doublons", ico: "▤" },
-  { id: "ramcleaner", label: "RamCleaner", desc: "Conseiller mémoire — analyse, trim, fin de tâche (ConfirmGate)", ico: "▣" },
-  { id: "processhub", label: "ProcessHub", desc: "Processus, services, démarrage et tâches planifiées", ico: "⚡" },
-  { id: "uninstx", label: "UninstX", desc: "Programmes installés, désinstallation et résiduels", ico: "⊟" },
-  { id: "sysinspect", label: "SysInspect", desc: "Événements Windows et inventaire des pilotes", ico: "◎" },
-  { id: "admin", label: "Admin léger", desc: "PowerPlan · Impression · Restauration · Sessions", ico: "⚙" },
-];
-const ICO = Object.fromEntries(FALLBACK_MODULES.map((m) => [m.id, m.ico]));
+function moduleCatalog() {
+  return [
+    { id: "systemclean", label: "SystemClean", desc: t("modSystemCleanDesc"), ico: "⌫" },
+    { id: "diskmap", label: "DiskMap", desc: t("modDiskMapDesc"), ico: "▤" },
+    { id: "ramcleaner", label: "RamCleaner", desc: t("modRamCleanerDesc"), ico: "▣" },
+    { id: "processhub", label: "ProcessHub", desc: t("modProcessHubDesc"), ico: "⚡" },
+    { id: "uninstx", label: "UninstX", desc: t("modUninstXDesc"), ico: "⊟" },
+    { id: "sysinspect", label: "SysInspect", desc: t("modSysInspectDesc"), ico: "◎" },
+    { id: "admin", label: t("navAdmin"), desc: t("modAdminDesc"), ico: "⚙" },
+  ];
+}
+const ICO = {
+  systemclean: "⌫",
+  diskmap: "▤",
+  ramcleaner: "▣",
+  processhub: "⚡",
+  uninstx: "⊟",
+  sysinspect: "◎",
+  admin: "⚙",
+};
 
 const HISTORY = 60;
 const ARC_LEN = 141.37;
@@ -79,45 +90,44 @@ function metricsMarkup() {
   <div class="hub-dash-root">
     <header class="hub-page-header hub-dash-head">
       <div>
-        <p class="kicker">Hub ${esc(HUB_LABEL)} · Void Glow</p>
-        <h1>Accueil</h1>
-        <p>${esc(HUB_BLURB)}</p>
+        <h1>${esc(t("dashTitle"))}</h1>
+        <p>${esc(t("dashBlurb"))}</p>
       </div>
       <div class="hub-dash-live">
         <time id="clock">—</time>
-        <span class="live-pill off" id="livePill"><i></i> OFF</span>
+        <span class="live-pill off" id="livePill"><i></i> ${esc(t("dashOff"))}</span>
       </div>
     </header>
 
     <div class="dash-prop">
-      <section class="gauges-block" aria-label="CPU RAM GPU">
+      <section class="gauges-block" aria-label="${esc(t("dashGaugesAria"))}">
         <div class="gauges">
           ${gaugeCard("cpu", "CPU")}
           ${gaugeCard("ram", "RAM")}
           ${gaugeCard("gpu", "GPU")}
         </div>
       </section>
-      <section class="mid-row" aria-label="Uptime et processus">
+      <section class="mid-row" aria-label="${esc(t("dashMidAria"))}">
         <article class="kpi kpi-up">
-          <small>Uptime</small>
+          <small>${esc(t("dashUptime"))}</small>
           <b id="uptime">—</b>
-          <em id="hostname">host</em>
+          <em id="hostname">${esc(t("dashHost"))}</em>
           <span class="since" id="since">—</span>
         </article>
         <article class="kpi">
-          <small>Processus</small>
+          <small>${esc(t("dashProcs"))}</small>
           <b id="procCount">—</b>
-          <em>actifs</em>
+          <em>${esc(t("dashProcsEm"))}</em>
         </article>
       </section>
-      <section class="bottom-row" aria-label="Réseau et disques">
+      <section class="bottom-row" aria-label="${esc(t("dashBottomAria"))}">
         <article class="kpi kpi-net">
-          <small><span class="live-dot"></span>Trafic · live</small>
+          <small><span class="live-dot"></span>${esc(t("dashTrafficLive"))}</small>
           <div class="net-live">
             <div class="rate dn">↓ <b id="netDn">0</b><span>KB/s</span></div>
             <div class="rate up">↑ <b id="netUp">0</b><span>KB/s</span></div>
           </div>
-          <p class="net-peak" id="netPeak">pic 60s · ↓ — · ↑ —</p>
+          <p class="net-peak" id="netPeak">${esc(t("dashPeak", { dn: "—", up: "—" }))}</p>
           <svg class="net-spark" id="netSpark" viewBox="0 0 120 36" aria-hidden="true">
             <path class="area-dn" d=""/>
             <polyline class="ln-dn" points=""/>
@@ -127,18 +137,18 @@ function metricsMarkup() {
         </article>
         <article class="kpi kpi-disk">
           <div class="disk-head">
-            <small>Disques</small>
-            <b class="count" id="diskCount">— vol.</b>
+            <small>${esc(t("dashDisks"))}</small>
+            <b class="count" id="diskCount">—</b>
           </div>
           <div class="disk-stack" id="diskStack">
-            <div class="disk-empty">Chargement…</div>
+            <div class="disk-empty">${esc(t("dashDisksLoading"))}</div>
           </div>
         </article>
       </section>
     </div>
 
-    <section class="hub-dash-modules" aria-label="Accès rapide">
-      <h2 class="hub-section-title sec">Modules</h2>
+    <section class="hub-dash-modules" aria-label="${esc(t("dashQuickAria"))}">
+      <h2 class="hub-section-title sec">${esc(t("dashModules"))}</h2>
       <div class="mods" id="tileGrid"></div>
       <p class="hub-status" id="dashStatus"></p>
     </section>
@@ -149,8 +159,8 @@ function fmtUptime(s) {
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}j ${h}h`;
-  return `${h}h ${m}m`;
+  if (d > 0) return t("uptimeDays", { d, h });
+  return t("uptimeHours", { h, m });
 }
 
 function push(key, val) {
@@ -254,9 +264,9 @@ function renderDisks(disks) {
   const count = el("diskCount");
   if (!stack) return;
   const rows = Array.isArray(disks) ? disks : [];
-  if (count) count.textContent = `${rows.length} vol.`;
+  if (count) count.textContent = t("dashDiskCount", { n: rows.length });
   if (!rows.length) {
-    stack.innerHTML = `<div class="disk-empty">Aucun volume</div>`;
+    stack.innerHTML = `<div class="disk-empty">${esc(t("dashDisksEmpty"))}</div>`;
     return;
   }
   stack.innerHTML = rows
@@ -308,9 +318,9 @@ function apply(data) {
     gpu.temp_c ?? gpu.temperature
   );
 
-  if (el("procCount")) el("procCount").textContent = (data.procs ?? 0).toLocaleString("fr-FR");
+  if (el("procCount")) el("procCount").textContent = (data.procs ?? 0).toLocaleString(locale());
   if (el("uptime")) el("uptime").textContent = fmtUptime(data.uptime_sec ?? 0);
-  if (el("hostname")) el("hostname").textContent = data.hostname || "host";
+  if (el("hostname")) el("hostname").textContent = data.hostname || t("dashHost");
   if (el("since")) {
     const boot = data.boot_time || data.boot_iso || "";
     el("since").textContent = boot ? `boot ${boot}` : (data.os || "—");
@@ -333,20 +343,23 @@ function apply(data) {
   push("netUp", upKb);
   if (el("netDn")) el("netDn").textContent = downKb.toFixed(0);
   if (el("netUp")) el("netUp").textContent = upKb.toFixed(0);
-  if (el("netPeak")) el("netPeak").textContent = `pic 60s · ↓ ${peakDn.toFixed(0)} · ↑ ${peakUp.toFixed(0)}`;
+  if (el("netPeak")) el("netPeak").textContent = t("dashPeak", {
+    dn: peakDn.toFixed(0),
+    up: peakUp.toFixed(0),
+  });
   drawNetSpark();
   renderDisks(data.disk || []);
 
   if (el("livePill")) {
     el("livePill").classList.remove("off");
-    el("livePill").innerHTML = "<i></i> LIVE";
+    el("livePill").innerHTML = `<i></i> ${esc(t("dashLive"))}`;
   }
 }
 
 function offline() {
   if (el("livePill")) {
     el("livePill").classList.add("off");
-    el("livePill").innerHTML = "<i></i> OFF";
+    el("livePill").innerHTML = `<i></i> ${esc(t("dashOff"))}`;
   }
 }
 
@@ -380,11 +393,12 @@ async function tick() {
 
 function clock() {
   const c = el("clock");
-  if (c) c.textContent = new Date().toLocaleTimeString("fr-FR", { hour12: false });
+  if (c) c.textContent = new Date().toLocaleTimeString(locale(), { hour12: false });
 }
 
 async function mountTiles() {
   const a = api();
+  const fallback = moduleCatalog();
   let modules = [];
   try {
     if (a?.dashboard?.list_modules) {
@@ -392,12 +406,13 @@ async function mountTiles() {
       modules = (res && res.modules) || [];
     }
   } catch (_) {}
-  if (!modules.length) modules = FALLBACK_MODULES;
+  if (!modules.length) modules = fallback;
   else {
     modules = modules.map((m) => ({
       ...m,
       ico: ICO[m.id] || m.ico || "▪",
-      desc: m.desc || FALLBACK_MODULES.find((f) => f.id === m.id)?.desc || "",
+      desc: m.desc || fallback.find((f) => f.id === m.id)?.desc || "",
+      label: m.label || fallback.find((f) => f.id === m.id)?.label || m.id,
     }));
   }
   const tiles = el("tileGrid");
@@ -409,7 +424,7 @@ async function mountTiles() {
         <span class="tile-k">${esc(m.ico || "▪")}</span>
         <strong>${esc(m.label)}</strong>
         <span class="tile-b">${esc(m.desc || "")}</span>
-        <span class="go">Ouvrir →</span>
+        <span class="go">${esc(t("dashOpen"))}</span>
         <span class="fil"></span>
       </button>`
     )
@@ -444,7 +459,7 @@ export async function mount(root) {
   unmount();
   root.innerHTML = metricsMarkup();
   const status = el("dashStatus");
-  if (status) status.textContent = "Lecture locale · métriques live · aucune donnée envoyée hors machine.";
+  if (status) status.textContent = t("dashStatus");
   await mountTiles();
   clock();
   clockTimer = setInterval(clock, 1000);

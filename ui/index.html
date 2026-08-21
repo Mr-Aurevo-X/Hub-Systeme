@@ -40,63 +40,114 @@
       </div>
 
       <nav class="hub-nav" id="hubNav" role="navigation">
-        <button type="button" class="hub-nav-item is-active" data-view="dashboard" data-tooltip="Accueil" title="Accueil">
+        <button type="button" class="hub-nav-item is-active" data-view="dashboard" data-tooltip="Accueil" data-i18n-title="navHome" title="Accueil" aria-current="page">
           <span class="hub-nav-ico" aria-hidden="true">⌂</span>
-          <span class="hub-nav-label">Accueil</span>
+          <span class="hub-nav-label" data-i18n="navHome">Accueil</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="systemclean" data-tooltip="SystemClean" title="SystemClean">
+        <button type="button" class="hub-nav-item" data-view="systemclean" data-tooltip="SystemClean" data-i18n-title="navSystemClean" title="SystemClean">
           <span class="hub-nav-ico" aria-hidden="true">⌫</span>
-          <span class="hub-nav-label">SystemClean</span>
+          <span class="hub-nav-label" data-i18n="navSystemClean">SystemClean</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="diskmap" data-tooltip="DiskMap" title="DiskMap">
+        <button type="button" class="hub-nav-item" data-view="diskmap" data-tooltip="DiskMap" data-i18n-title="navDiskMap" title="DiskMap">
           <span class="hub-nav-ico" aria-hidden="true">▤</span>
-          <span class="hub-nav-label">DiskMap</span>
+          <span class="hub-nav-label" data-i18n="navDiskMap">DiskMap</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="ramcleaner" data-tooltip="RamCleaner" title="RamCleaner">
+        <button type="button" class="hub-nav-item" data-view="ramcleaner" data-tooltip="RamCleaner" data-i18n-title="navRamCleaner" title="RamCleaner">
           <span class="hub-nav-ico" aria-hidden="true">▣</span>
-          <span class="hub-nav-label">RamCleaner</span>
+          <span class="hub-nav-label" data-i18n="navRamCleaner">RamCleaner</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="processhub" data-tooltip="ProcessHub" title="ProcessHub">
+        <button type="button" class="hub-nav-item" data-view="processhub" data-tooltip="ProcessHub" data-i18n-title="navProcessHub" title="ProcessHub">
           <span class="hub-nav-ico" aria-hidden="true">⚡</span>
-          <span class="hub-nav-label">ProcessHub</span>
+          <span class="hub-nav-label" data-i18n="navProcessHub">ProcessHub</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="uninstx" data-tooltip="UninstX" title="UninstX">
+        <button type="button" class="hub-nav-item" data-view="uninstx" data-tooltip="UninstX" data-i18n-title="navUninstX" title="UninstX">
           <span class="hub-nav-ico" aria-hidden="true">⊟</span>
-          <span class="hub-nav-label">UninstX</span>
+          <span class="hub-nav-label" data-i18n="navUninstX">UninstX</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="sysinspect" data-tooltip="SysInspect" title="SysInspect">
+        <button type="button" class="hub-nav-item" data-view="sysinspect" data-tooltip="SysInspect" data-i18n-title="navSysInspect" title="SysInspect">
           <span class="hub-nav-ico" aria-hidden="true">◎</span>
-          <span class="hub-nav-label">SysInspect</span>
+          <span class="hub-nav-label" data-i18n="navSysInspect">SysInspect</span>
         </button>
-        <button type="button" class="hub-nav-item" data-view="admin" data-tooltip="Admin léger" title="Admin léger">
+        <button type="button" class="hub-nav-item" data-view="admin" data-tooltip="Admin léger" data-i18n-title="navAdmin" title="Admin léger">
           <span class="hub-nav-ico" aria-hidden="true">⚙</span>
-          <span class="hub-nav-label">Admin léger</span>
+          <span class="hub-nav-label" data-i18n="navAdmin">Admin léger</span>
         </button>
       </nav>
 
       <div class="hub-sidebar-foot">
-        <button type="button" class="hub-collapse-btn" id="btnCollapse" aria-expanded="true" title="Réduire la barre">
+        <button type="button" class="hub-collapse-btn" id="btnCollapse" aria-expanded="true" data-i18n-title="collapseTitle" title="Réduire la barre">
           <span class="hub-nav-ico" aria-hidden="true">◂</span>
-          <span class="hub-nav-label">Réduire</span>
+          <span class="hub-nav-label" data-i18n="collapse">Réduire</span>
         </button>
-        <p class="hub-privacy" id="privacyNote">Mr-Aurevo-X ne collecte aucune donnée. Local-first ; le réseau n'est utilisé que si vous lancez une action qui le nécessite (voir PRIVACY).</p>
-        <div class="hub-support" aria-label="Soutien optionnel">
-          <p class="hub-support-note">Si le boulot te plaît, un café — sinon profite.</p>
+        <div
+          class="hub-lang-switch"
+          id="langSwitch"
+          role="group"
+          data-i18n-aria="langSwitchAria"
+          aria-label="Langue"
+        >
+          <button type="button" class="hub-lang-seg is-active" data-lang="fr" aria-pressed="true">FR</button>
+          <button type="button" class="hub-lang-seg" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <p class="hub-privacy" id="privacyNote" data-i18n="privacy">100 % local-first. Seule connexion hors machine : vérif. version GitHub (si activée dans À propos). Sinon zéro réseau hors actions explicites des modules.</p>
+        <div class="hub-support" data-i18n-aria="supportAria" aria-label="Soutien optionnel">
+          <p class="hub-support-note" data-i18n="supportNote">Si le boulot te plaît, un café — sinon profite.</p>
           <div class="hub-support-links">
             <button type="button" class="hub-support-btn" data-support="discord" title="Discord">Discord</button>
             <button type="button" class="hub-support-btn" data-support="paypal" title="PayPal">PayPal</button>
             <button type="button" class="hub-support-btn" data-support="revolut" title="Revolut">Revolut</button>
           </div>
         </div>
+        <button type="button" class="btn about-btn" id="btnAbout" data-i18n="aboutBtn">À propos</button>
       </div>
     </aside>
 
     <main class="hub-main" id="hubMain">
-      <div class="hub-view is-enter" id="hubView" data-view="dashboard">
-        <!-- Dashboard monté au boot ; modules lazy -->
-      </div>
+      <div class="hub-view is-enter" id="hubView" data-view="dashboard"></div>
     </main>
   </div>
+
+  <dialog class="about-dialog" id="aboutDialog">
+    <form method="dialog" class="about-card">
+      <h3 data-i18n="aboutTitle">À propos — Hub System</h3>
+      <p data-i18n="aboutIntro">PC Command System (Mr-Aurevo-X). SystemClean · DiskMap · RamCleaner · ProcessHub · UninstX · SysInspect · Admin léger. Gratuit, sans compte. Accueil lecture seule ; mutators ConfirmGate.</p>
+      <ul class="legal-strip" id="aboutLegalList">
+        <li><strong data-i18n="aboutLegalLocal">100 % local-first — pas de télémétrie</strong></li>
+        <li data-i18n="aboutLegalGh">Seule connexion hors machine : vérif. version GitHub (option ci-dessous)</li>
+        <li data-i18n="aboutLegalOff">Si vérif. désactivée : zéro réseau hors actions utilisateur (modules)</li>
+      </ul>
+      <label class="about-toggle">
+        <input type="checkbox" id="chkGithubUpdates" checked />
+        <span data-i18n="aboutToggle">Vérifier les nouvelles versions sur GitHub</span>
+      </label>
+      <p class="about-note" id="aboutUpdateHint" data-i18n="aboutHintOn">Quand activé : un appel API GitHub au démarrage (lecture seule, pas de téléchargement).</p>
+      <div class="about-repo" aria-label="Dépôt GitHub">
+        <label class="about-repo-label" for="aboutRepoUrl" data-i18n="aboutRepoLabel">Repo GitHub (releases)</label>
+        <div class="about-repo-row">
+          <input type="text" id="aboutRepoUrl" class="about-repo-input" readonly
+            value="https://github.com/Mr-Aurevo-X/Hub-Systeme" spellcheck="false" />
+          <button type="button" class="btn accent" id="btnCopyRepo" data-i18n="aboutCopy" data-i18n-title="aboutCopyUrlTitle" title="Copier l’URL">Copier</button>
+        </div>
+        <p class="about-note" id="aboutCopyHint" hidden data-i18n="aboutCopiedLink">Lien copié.</p>
+      </div>
+      <div class="about-paths" id="aboutPaths" data-i18n-aria="aboutPathsAria" aria-label="Chemins locaux">
+        <p class="about-repo-label" data-i18n="aboutPathsTitle">Chemins locaux (désinstall / ménage)</p>
+        <p class="about-note" data-i18n="aboutPathsIntro">Identifie clairement quoi supprimer. Les préférences Mr-Aurevo-X sont partagées entre apps.</p>
+        <div class="about-paths-list" id="aboutPathsList"></div>
+        <p class="about-note" id="aboutPathCopyHint" hidden data-i18n="aboutCopiedPath">Chemin copié.</p>
+      </div>
+      <div class="about-legal-links" role="group" data-i18n-aria="aboutLegalAria" aria-label="Documents légaux">
+        <button type="button" class="btn ghost" data-legal="terms" data-i18n="aboutLegalTerms">CGU</button>
+        <button type="button" class="btn ghost" data-legal="privacy" data-i18n="aboutLegalPrivacy">Confidentialité</button>
+        <button type="button" class="btn ghost" data-legal="mentions" data-i18n="aboutLegalMentions">Mentions</button>
+        <button type="button" class="btn ghost" data-legal="notices" data-i18n="aboutLegalNotices">Notices</button>
+      </div>
+      <pre class="about-legal-body" id="aboutLegalBody" hidden></pre>
+      <p class="copyright" data-i18n="aboutCopyright">Copyright © 2026 Mr-Aurevo-X — tous droits réservés</p>
+      <p class="about-note" data-i18n="aboutRedistrib">Redistribution, reverse engineering ou suppression du copyright interdits sans accord écrit.</p>
+      <button type="submit" class="btn accent" data-i18n="aboutClose">Fermer</button>
+    </form>
+  </dialog>
 
   <script src="vendor/pc-command-kit/components/tool-chrome.js"></script>
   <script src="suite-boot.js"></script>
