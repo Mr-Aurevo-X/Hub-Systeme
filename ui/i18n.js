@@ -65,7 +65,9 @@ const DICT = {
     aboutPathInstall: "Install (dossier de l’exe)",
     aboutPathVersionHint: "version.json et métadonnées suite.",
     aboutPathSettingsHint: "Fichier partagé Mr-Aurevo-X — à garder si d’autres apps l’utilisent.",
-    aboutPathInstallHint: "Dossier portable Launch-Hub-*.exe — supprimer ce dossier pour désinstaller.",
+    aboutPathInstallHint: "Dossier réel de l’exe lancé (Bureau, USB, Downloads…) — à supprimer pour désinstaller.",
+    aboutPathInstallHintMissing:
+      "Emplacement typique après extraction du zip Releases (absent en mode Lancer.cmd / SoT).",
     aboutLegalLoadFail: "Impossible de charger {file}",
     releaseNew: "Nouvelle version",
     releaseOpen: "Ouvrir la release",
@@ -630,7 +632,7 @@ const DICT = {
     collapseTitle: "Collapse sidebar",
     expandTitle: "Expand sidebar",
     privacy:
-      "100% local-first. Only off-machine call: GitHub version check (if enabled in About). Otherwise no network except explicit module actions.",
+      "100% local-first. Only outbound connection: optional GitHub version check (About). Otherwise no network except explicit module actions.",
     supportAria: "Optional support",
     supportNote: "If you like the work, a coffee — otherwise just enjoy.",
     aboutBtn: "About",
@@ -638,8 +640,8 @@ const DICT = {
     aboutIntro:
       "PC Command System (Mr-Aurevo-X). SystemClean · DiskMap · RamCleaner · ProcessHub · UninstX · SysInspect · Light Admin. Free, no account. Home is read-only; mutators use ConfirmGate.",
     aboutLegalLocal: "100% local-first — no telemetry",
-    aboutLegalGh: "Only off-machine call: GitHub version check (option below)",
-    aboutLegalOff: "If check is off: no network except user module actions",
+    aboutLegalGh: "Only outbound connection: GitHub version check (option below)",
+    aboutLegalOff: "If check is off: zero network except user module actions",
     aboutToggle: "Check for new versions on GitHub",
     aboutHintOn:
       "When on: one GitHub API call at startup (read-only, no download).",
@@ -653,17 +655,16 @@ const DICT = {
     aboutCopyFallback: "Select and Ctrl+C.",
     aboutCopied: "Copied.",
     aboutPathsTitle: "Local paths (uninstall / cleanup)",
-    aboutPathsIntro:
-      "Shows clearly what to delete. Mr-Aurevo-X preferences are shared across apps.",
+    aboutPathsIntro: "Clear labels for what to remove. Mr-Aurevo-X prefs are shared across apps.",
     aboutPathsAria: "Local paths",
     aboutLegalAria: "Legal documents",
     aboutLegalTerms: "Terms",
     aboutLegalPrivacy: "Privacy",
-    aboutLegalMentions: "Notices",
-    aboutLegalNotices: "Licenses",
+    aboutLegalMentions: "Legal notice",
+    aboutLegalNotices: "Notices",
     aboutCopyright: "Copyright © 2026 Mr-Aurevo-X — all rights reserved",
     aboutRedistrib:
-      "Redistribution, reverse engineering, or copyright removal without written permission is prohibited.",
+      "Redistribution, reverse engineering, or copyright removal forbidden without written consent.",
     aboutClose: "Close",
     aboutOptional: "(optional)",
     aboutPathFallback: "Path",
@@ -672,7 +673,9 @@ const DICT = {
     aboutPathInstall: "Install (exe folder)",
     aboutPathVersionHint: "version.json and suite metadata.",
     aboutPathSettingsHint: "Shared Mr-Aurevo-X file — keep if other apps still use it.",
-    aboutPathInstallHint: "Portable Launch-Hub-*.exe folder — delete this folder to uninstall.",
+    aboutPathInstallHint: "Real folder of the running exe (Desktop, USB, Downloads…) — delete to uninstall.",
+    aboutPathInstallHintMissing:
+      "Typical location after extracting the Releases zip (missing in Lancer.cmd / SoT mode).",
     aboutLegalLoadFail: "Could not load {file}",
     releaseNew: "New version",
     releaseOpen: "Open release",
@@ -1325,6 +1328,9 @@ export function pathLabelFor(entry) {
 
 export function pathHintFor(entry) {
   const id = entry?.id || "";
+  if (id === "app" && entry?.optional) {
+    return t("aboutPathInstallHintMissing");
+  }
   const map = {
     version: "aboutPathVersionHint",
     settings: "aboutPathSettingsHint",

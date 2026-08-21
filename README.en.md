@@ -1,53 +1,55 @@
 [Français](README.md) · [English](README.en.md)
 
-# Hub-Systeme — PC Command
+# PC Command | System
 
-**Read-only** distribution. No pull requests or issues (`CONTRIBUTING.md`).
+**System** hub — cleanup, memory, processes, uninstall. One elevated window, live Home, native modules.  
+**Void Glow** · **local-first** (optional GitHub version check only) · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
 
-**System** hub — Dashboard + native modules (`host.py` / `backend/`).  
-License: PolyForm Noncommercial 1.0.0. Publisher: **Mr-Aurevo-X**.
+## Preview
 
-**Local-first** (Python + WebView2). No publisher telemetry. No in-app download: a banner may offer to open the GitHub release if a newer version exists (`PRIVACY.md`).
-
-## Overview
-
-| Home | Module |
-|---------|--------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![SystemClean](docs/screenshots/systemclean.png) |
+| Home | SystemClean |
+|------|-------------|
+| ![Home](docs/screenshots/dashboard.png) | ![SystemClean](docs/screenshots/systemclean.png) |
 
 ## Modules
 
-| Module | Merged from | ConfirmGate |
-|--------|------------------|-------------|
-| SystemClean | WinCleaner · DiskMap | empty_recycle_bin · rebuild_icon_cache · clear_recent_files · delete_large_file · delete_empty_folder · trash_dup_paths |
-| RamCleaner | Lab/Ram Cleaner | kill_selected · trim_selected |
-| ProcessHub | ProcessGuard · StartupX | kill_process · empty_working_set · service_action · set_task_enabled · create_at_logon |
-| UninstX | UninstX | uninstall_app |
-| SysInspect | SysInspect | — (read-only) |
-| Light Admin | PowerPlan · PrintQueue · RestorePoint · UserSessions | set_plan · purge_printer_jobs · create_restore_point · logoff_session |
+| Module | Role |
+|--------|------|
+| **SystemClean** | Traces, caches, recycle bin, tweaks — ConfirmGate |
+| DiskMap | Disk map / usage |
+| RamCleaner | Memory · trim · end task |
+| ProcessHub | Live processes |
+| UninstX | Clean uninstall |
+| SysInspect | System inspection |
+| Light Admin | Targeted admin actions |
 
-Isolation: `ISOLATION.md`. Channels: `RELEASES.md`.
+## Why this hub
 
-## Where it installs
+- **Read-only Home** — CPU · RAM · GPU · disks, zero mutators
+- **ConfirmGate** on every destructive action
+- **FR | EN** · optional support · About (Terms / Privacy / Legal notice / Notices)
+- Clear local paths for manual uninstall
+
+## Where it lives
 
 | Mode | Location |
 |------|----------|
-| **Release** (`Launch-Hub-Systeme.zip`) | **Portable** folder: extract the zip anywhere, run `Launch-Hub-Systeme.exe` from that folder (keep zip contents together). |
-| **Version / stamp** | `%LOCALAPPDATA%\PCCommand\` (e.g. shared `version.json`) |
-| **Accent / language prefs** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (if present) |
-| **Dev (sources)** | Repo clone + `Lancer.cmd` — nothing else is copied until you deploy the zip |
+| **Release** (`Launch-Hub-Systeme.zip`) | **Portable** folder — extract anywhere, run `Launch-Hub-Systeme.exe` |
+| Metadata / version | `%LOCALAPPDATA%\PCCommand\` |
+| Prefs (accent, language, updates) | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
+| Dev | Clone + `Lancer.cmd` |
 
-Download: [Hub-Systeme Releases](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases).
+Download: [Hub-Systeme Releases](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · tag **v2.0.0**
 
-## Run
+## Launch
 
 ```bat
 Lancer.cmd
 ```
 
-Windows may flag the app as potentially unsafe: binaries are not Authenticode-signed (no paid publisher certificate). That is a SmartScreen reputation warning, not an antivirus verdict.
+Windows may show “potentially unwanted”: binaries are **not** Authenticode-signed. SmartScreen reputation warning, not an AV verdict.
 
-HWND titles: `PC Command | System` / `[Module]`.
+HWND title: `PC Command | System` / `[Module]`. Isolation: `ISOLATION.md`. License: `LICENSE` (PolyForm Noncommercial 1.0.0) — keep copyright & About/legal text.
 
 ---
 

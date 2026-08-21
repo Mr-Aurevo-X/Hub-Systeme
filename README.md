@@ -1,43 +1,45 @@
 ﻿[Français](README.md) · [English](README.en.md)
 
-# Hub-Systeme — PC Command
+# PC Command | System
 
-Distribution **lecture seule**. Pas de pull requests ni d’issues (`CONTRIBUTING.md`).
-
-Hub catégorie **Système** — Dashboard + modules natifs (`host.py` / `backend/`).  
-Licence : PolyForm Noncommercial 1.0.0. Éditeur : **Mr-Aurevo-X**.
-
-Architecture **local-first** (Python + WebView2). Pas de télémétrie éditeur. Pas de téléchargement automatique : une bannière peut proposer d’ouvrir la release GitHub si une version plus récente existe (`PRIVACY.md`).
+Hub **Système** — ménage, mémoire, processus, désinstall. Une seule fenêtre admin, Accueil live, modules natifs.  
+**Void Glow** · **100 % local** (sauf vérif. GitHub optionnelle) · PolyForm Noncommercial 1.0.0 · **Mr-Aurevo-X**
 
 ## Aperçu
 
-| Accueil | Module |
-|---------|--------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![SystemClean](docs/screenshots/systemclean.png) |
+| Accueil | SystemClean |
+|---------|-------------|
+| ![Accueil](docs/screenshots/dashboard.png) | ![SystemClean](docs/screenshots/systemclean.png) |
 
 ## Modules
 
-| Module | Source fusionnée | ConfirmGate |
-|--------|------------------|-------------|
-| SystemClean | WinCleaner · DiskMap | empty_recycle_bin · rebuild_icon_cache · clear_recent_files · delete_large_file · delete_empty_folder · trash_dup_paths |
-| RamCleaner | Lab/Ram Cleaner | kill_selected · trim_selected (`api.ramcleaner.*`) |
-| ProcessHub | ProcessGuard · StartupX | kill_process · empty_working_set · service_action · set_task_enabled · create_at_logon |
-| UninstX | UninstX | uninstall_app |
-| SysInspect | SysInspect | — (lecture seule) |
-| Admin léger | PowerPlan · PrintQueue · RestorePoint · UserSessions | set_plan · purge_printer_jobs · create_restore_point · logoff_session |
+| Module | Rôle |
+|--------|------|
+| **SystemClean** | Traces, caches, corbeille, optimisations — ConfirmGate |
+| DiskMap | Carte disques / occupation |
+| RamCleaner | Mémoire · trim · fin de tâche |
+| ProcessHub | Processus live |
+| UninstX | Désinstallation propre |
+| SysInspect | Inspection système |
+| Admin léger | Actions admin ciblées |
 
-Dashboard = KPIs lecture seule. Isolation : `ISOLATION.md`. Canaux : `RELEASES.md`.
+## Pourquoi ce hub
 
-## Où s’installe
+- **Accueil lecture seule** — CPU · RAM · GPU · disques, zéro mutator
+- **ConfirmGate** sur chaque action destructive
+- **FR | EN** · dons optionnels · À propos (CGU / Confidentialité / Mentions / Notices)
+- Chemins locaux clairs pour désinstaller à la main
+
+## Où ça vit sur le PC
 
 | Mode | Emplacement |
 |------|-------------|
-| **Release** (`Launch-Hub-Systeme.zip`) | Dossier **portable** : extrayez le zip où vous voulez, lancez `Launch-Hub-Systeme.exe` depuis ce dossier (gardez le contenu du zip ensemble). |
-| **Métadonnées / version** | `%LOCALAPPDATA%\PCCommand\` (ex. `version.json` partagé PC Command) |
-| **Préférences accent / langue** | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (si présent) |
-| **Dev (sources)** | Clone du repo + `Lancer.cmd` — rien n’est copié ailleurs tant que vous ne déployez pas le zip |
+| **Release** (`Launch-Hub-Systeme.zip`) | Dossier **portable** — extrais où tu veux, lance `Launch-Hub-Systeme.exe` |
+| Métadonnées / version | `%LOCALAPPDATA%\PCCommand\` |
+| Préférences (accent, langue, maj) | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
+| Dev | Clone + `Lancer.cmd` |
 
-Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases).
+Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · tag **v2.0.0**
 
 ## Lancer
 
@@ -45,11 +47,9 @@ Téléchargement : [Releases Hub-Systeme](https://github.com/Mr-Aurevo-X/Hub-Sys
 Lancer.cmd
 ```
 
-Windows peut afficher « potentiellement dangereux » : les binaires ne sont pas signés Authenticode (pas de certificat éditeur payant). C’est un avertissement de réputation SmartScreen, pas un verdict antivirus.
+Windows peut afficher « potentiellement dangereux » : binaires **non signés** Authenticode. Avertissement SmartScreen, pas un verdict antivirus.
 
-Python pin + `pywebview` + `psutil` (Admin hérité du launcher PC Command).
-
-Titres HWND : `PC Command | System` / `[Module]`.
+Titre HWND : `PC Command | System` / `[Module]`. Isolation : `ISOLATION.md`. Licence : `LICENSE` (PolyForm Noncommercial 1.0.0) — conserver copyright & textes À propos.
 
 ---
 

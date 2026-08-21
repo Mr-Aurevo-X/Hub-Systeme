@@ -126,25 +126,117 @@ def set_github_update_check(enabled: bool) -> dict[str, Any]:
     }
 
 
+def _user_desktop_dirs() -> list[Path]:
+    """Possible Desktop folders (FR Bureau / EN Desktop / OneDrive)."""
+    home = Path.home()
+    out: list[Path] = []
+    for rel in (
+        "Desktop",
+        "Bureau",
+        "OneDrive/Desktop",
+        "OneDrive/Bureau",
+        "OneDrive - Personal/Desktop",
+        "OneDrive - Personal/Bureau",
+    ):
+        p = home / Path(rel)
+        if p.is_dir():
+            out.append(p)
+    return out
+
+
+def _user_downloads_dir() -> Path | None:
+    home = Path.home()
+    for name in ("Downloads", "Téléchargements", "Telechargements"):
+        p = home / name
+        if p.is_dir():
+            return p
+    return None
+
+
+def resolve_hub_exe_dir(hub_id: str | None = None) -> Path | None:
+    """Folder that contains the shipped Launch-Hub-*.exe when known.
+
+    Frozen / shipped: parent of ``sys.executable`` — wherever the user put it
+    (Desktop, USB, Downloads, Programs…). That is the path shown in About.
+
+    Dev (Lancer.cmd): search common locations for the exe; never return monorepo.
+    """
+    if getattr(sys, "frozen", False):
+        try:
+            return Path(sys.executable).resolve().parent
+        except OSError:
+            return None
+
+    hub_key = normalize_hub_id(hub_id or "")
+    asset = HUB_ZIP_ASSETS.get(hub_key, "")
+    exe_name = asset[:-4] + ".exe" if asset.lower().endswith(".zip") else ""
+    if not exe_name:
+        return None
+
+    local = localappdata_root()
+    search_roots: list[Path] = []
+    search_roots.extend(_user_desktop_dirs())
+    dl = _user_downloads_dir()
+    if dl is not None:
+        search_roots.append(dl)
+    search_roots.extend(
+        [
+            local / "Programs" / "PCCommand",
+            local / "Programs" / "PC Command",
+            local / "Programs" / "Mr-Aurevo-X",
+            local / "PCCommand",
+            local / "Programs",
+        ]
+    )
+    pf = os.environ.get("ProgramFiles") or r"C:\Program Files"
+    pfx86 = os.environ.get("ProgramFiles(x86)") or r"C:\Program Files (x86)"
+    search_roots.extend([Path(pf) / "PCCommand", Path(pfx86) / "PCCommand"])
+
+    seen: set[Path] = set()
+    for root in search_roots:
+        try:
+            root = root.resolve()
+        except OSError:
+            continue
+        if root in seen or not root.is_dir():
+            continue
+        seen.add(root)
+        direct = root / exe_name
+        if direct.is_file():
+            return root
+        # One level of subfolders (zip extract folder)
+        try:
+            for child in root.iterdir():
+                if child.is_dir():
+                    hit = child / exe_name
+                    if hit.is_file():
+                        return child.resolve()
+        except OSError:
+            continue
+    return None
+
+
 def about_local_paths(app_dir: Path, *, hub_id: str | None = None) -> dict[str, Any]:
     """Labeled absolute paths for About — uninstall / manual cleanup guidance.
 
     Never expose monorepo / SoT / clone paths (even when running via Lancer.cmd).
     ``app_dir`` is kept for API compatibility; it is not shown in the UI.
+
+    Install path = real folder of the running / found Launch-Hub-*.exe
+    (Desktop, USB, …) — never a invented Programs path.
     """
     _ = app_dir  # API compat — never surface SoT/clone in About
     hub_key = normalize_hub_id(hub_id or "")
     entries: list[dict[str, Any]] = []
 
-    # Install path only for shipped / frozen builds (exe parent).
-    if getattr(sys, "frozen", False):
-        app_path = Path(sys.executable).resolve().parent
+    exe_dir = resolve_hub_exe_dir(hub_id)
+    if exe_dir is not None:
         entries.append(
             {
                 "id": "app",
                 "label": "Install (dossier de l’exe)",
-                "path": str(app_path),
-                "hint": "Dossier portable Launch-Hub-*.exe — supprimer ce dossier pour désinstaller.",
+                "path": str(exe_dir),
+                "hint": "Dossier réel de l’exe lancé (Bureau, USB, Downloads…) — à supprimer pour désinstaller.",
             }
         )
 
