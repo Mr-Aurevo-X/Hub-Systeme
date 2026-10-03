@@ -7,7 +7,7 @@ There is **no** Mr-Aurevo-X backend and **no** telemetry.
 
 Outbound network (when it happens):
 - **Optional** read-only GitHub **Latest release** check (opt-out in About)
-- **Support links** (Discord / PayPal / Revolut) only when the user clicks
+- **Support links** (Discord / dons crypto) only when the user clicks
 - **No module network egress** — cleanup / disk / process / uninstall stay on-machine
 
 Official builds: only Releases on **https://github.com/Mr-Aurevo-X/Hub-Systeme**  

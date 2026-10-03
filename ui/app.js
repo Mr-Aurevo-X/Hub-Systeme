@@ -320,7 +320,15 @@ function wireSidebar() {
   document.querySelector(".hub-support")?.addEventListener("click", async (ev) => {
     const supportBtn = ev.target.closest("[data-support]");
     if (!supportBtn) return;
-    const kind = supportBtn.dataset.support;
+    const kind = (supportBtn.dataset.support || "").toLowerCase();
+    if (kind === "crypto") {
+      try {
+        if (globalThis.MrAurevoXCrypto && typeof MrAurevoXCrypto.open === "function") {
+          await MrAurevoXCrypto.open();
+        }
+      } catch (_) {}
+      return;
+    }
     const a = apiRoot();
     try {
       if (a && typeof a.open_support_url === "function") {

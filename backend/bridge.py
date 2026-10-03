@@ -74,7 +74,6 @@ _PROTECTED_NAMES = frozenset(
 
 _CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-
 def _ps_json(script: str, timeout: int = 60) -> Any:
     proc = subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
@@ -93,7 +92,6 @@ def _ps_json(script: str, timeout: int = 60) -> Any:
     except json.JSONDecodeError:
         return {"raw": out, "returncode": proc.returncode}
 
-
 def _is_admin() -> bool:
     try:
         import ctypes
@@ -102,7 +100,6 @@ def _is_admin() -> bool:
     except Exception:
         return False
 
-
 def _fmt_bytes(n: int) -> str:
     size = float(n)
     for unit in ("B", "KB", "MB", "GB", "TB"):
@@ -110,7 +107,6 @@ def _fmt_bytes(n: int) -> str:
             return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
         size /= 1024
     return f"{n} B"
-
 
 def _decode_cli(data: bytes | str | None) -> str:
     if data is None:
@@ -127,7 +123,6 @@ def _decode_cli(data: bytes | str | None) -> str:
         return data.decode("utf-8")
     except UnicodeDecodeError:
         return data.decode("oem", errors="replace")
-
 
 class _GateMixin:
     def __init__(self, gate: ConfirmGate) -> None:
@@ -153,9 +148,7 @@ class _GateMixin:
             return {"ok": False, "error": "Jeton de confirmation invalide ou expire"}
         return None
 
-
 # ── SysInspect ───────────────────────────────────────────────────────────────
-
 
 class SysInspectApi:
     def recent_errors(self, count: int = 50, log_name: str = "System") -> dict:
@@ -167,9 +160,7 @@ class SysInspectApi:
     def open_dedicated(self) -> dict:
         return launch_suite_app("SysInspect")
 
-
 # ── UninstX ──────────────────────────────────────────────────────────────────
-
 
 class UninstXApi(_GateMixin):
     ACTIONS = ("uninstall_app",)
@@ -302,9 +293,7 @@ class UninstXApi(_GateMixin):
     def open_dedicated(self) -> dict:
         return launch_suite_app("UninstX")
 
-
 # ── ProcessHub ───────────────────────────────────────────────────────────────
-
 
 class ProcessHubApi(_GateMixin):
     ACTIONS = (
@@ -805,9 +794,7 @@ $used = $total - $free
             return {"ok": False, "error": f"App hors ProcessHub: {app}"}
         return launch_suite_app(app)
 
-
 # ── Admin (nested) ───────────────────────────────────────────────────────────
-
 
 class PowerPlanApi(_GateMixin):
     ACTIONS = ("set_plan", "set_focus_assist")
@@ -881,7 +868,6 @@ class PowerPlanApi(_GateMixin):
 
     def open_dedicated(self) -> dict:
         return launch_suite_app("PowerPlan")
-
 
 class PrintQueueApi(_GateMixin):
     ACTIONS = ("purge_printer_jobs",)
@@ -968,7 +954,6 @@ foreach ($j in $jobs) {{
     def open_dedicated(self) -> dict:
         return launch_suite_app("PrintQueue")
 
-
 class RestorePointApi(_GateMixin):
     ACTIONS = ("create_restore_point",)
 
@@ -1035,7 +1020,6 @@ Checkpoint-Computer -Description '{safe}' -RestorePointType MODIFY_SETTINGS
 
     def open_dedicated(self) -> dict:
         return launch_suite_app("RestorePoint")
-
 
 class UserSessionsApi(_GateMixin):
     ACTIONS = ("logoff_session",)
@@ -1136,7 +1120,6 @@ if (-not $rows.Count) {
     def open_dedicated(self) -> dict:
         return launch_suite_app("UserSessions")
 
-
 class AdminApi:
     """Nested admin APIs — powerplan / printqueue / restorepoint / usersessions."""
 
@@ -1156,9 +1139,7 @@ class AdminApi:
             return {"ok": False, "error": f"App hors module admin: {name}"}
         return launch_suite_app(name)
 
-
 # ── SystemClean ──────────────────────────────────────────────────────────────
-
 
 class SystemCleanApi(_GateMixin):
     ACTIONS = (
@@ -1248,11 +1229,9 @@ class SystemCleanApi(_GateMixin):
     def open_dedicated(self, name: str = "WinCleaner") -> dict:
         return self.open_app(name or "WinCleaner")
 
-
 HUB_TITLE = "PC Command | System"
 HUB_ID = "systeme"
 _HUB_ROOT = _BACKEND.parent
-
 
 class DashboardApi:
     """Lecture seule — aucun mutator."""
@@ -1267,7 +1246,6 @@ class DashboardApi:
         if port <= 0:
             return {"ok": False, "url": "", "error": "metrics offline"}
         return {"ok": True, "url": f"http://{host}:{port}/api/metrics"}
-
 
     def get_kpis(self) -> dict:
         disk_free_gb = None
@@ -1320,7 +1298,6 @@ $ramUsed = if ($os.TotalVisibleMemorySize) {
 
     def list_modules(self) -> dict:
         return {"ok": True, "modules": self._hub.module_catalog()}
-
 
 class Api(WindowChromeMixin):
     """Root pywebview.api — namespaces systemclean / processhub / …"""
@@ -1428,7 +1405,6 @@ class Api(WindowChromeMixin):
     def is_admin(self) -> dict:
         return {"ok": True, "admin": _is_admin()}
 
-
     def set_metrics_endpoint(self, host: str = "127.0.0.1", port: int = 0) -> dict:
         h = (host or "127.0.0.1").strip().lower()
         if h not in ("127.0.0.1", "localhost", "::1"):
@@ -1455,9 +1431,14 @@ class Api(WindowChromeMixin):
             "title": hub_update.title_with_version(HUB_TITLE, ver),
         }
 
+        def list_crypto_donations(self) -> dict:
+        return hub_update.list_crypto_donations()
+
+    def copy_crypto_address(self, asset_id: str = "") -> dict:
+        return hub_update.copy_crypto_address(asset_id)
+
     def open_support_url(self, kind: str = "") -> dict:
         return hub_update.open_support_url(kind)
-
 
     def get_update_check_pref(self) -> dict:
         enabled = hub_update.is_github_update_check_enabled()
