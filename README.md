@@ -40,7 +40,7 @@ Hub **Système** — ménage, mémoire, processus, désinstallation. Une fenêtr
 | Métadonnées | `%LOCALAPPDATA%\PCCommand\` |
 | Préférences | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (partagé) |
 
-[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · **v2.0.2**
+[Télécharger la release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · **v2.0.3**
 
 ## Lancer
 

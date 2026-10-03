@@ -40,7 +40,7 @@
 | Metadata | `%LOCALAPPDATA%\PCCommand\` |
 | Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
 
-[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) Â· **v2.0.2**
+[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) Â· **v2.0.3**
 
 ## Launch
 
