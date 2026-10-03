@@ -1,9 +1,9 @@
-[Français](README.md) · [English](README.en.md)
+﻿[FranÃ§ais](README.md) Â· [English](README.en.md)
 
 # PC Command | System
 
-**System** hub — cleanup, memory, processes, uninstall. One admin window, live Home.  
-**Free for life** · **as local as possible** · **Mr-Aurevo-X**
+**System** hub â€” cleanup, memory, processes, uninstall. One admin window, live Home.  
+**Free for life** Â· **as local as possible** Â· **Mr-Aurevo-X**
 
 ## Preview
 
@@ -15,9 +15,9 @@
 
 | Module | Role |
 |--------|------|
-| **SystemClean** | Traces, caches, recycle bin — confirmation before action |
+| **SystemClean** | Traces, caches, recycle bin â€” confirmation before action |
 | DiskMap | Disk map / usage |
-| RamCleaner | Memory · trim · end task |
+| RamCleaner | Memory Â· trim Â· end task |
 | ProcessHub | Live processes |
 | UninstX | Clean uninstall |
 | SysInspect | System inspection |
@@ -25,12 +25,12 @@
 
 ## Why this hub
 
-- Free for life — no subscription, no account
-- As local as possible — **no module network egress**
+- Free for life â€” no subscription, no account
+- As local as possible â€” **no module network egress**
 - GitHub update check **opt-out** in About
 - Confirmation before any action that changes the system
 - UI FR | EN
-- Read-only Home (CPU · RAM · GPU · disks)
+- Read-only Home (CPU Â· RAM Â· GPU Â· disks)
 
 ## On your PC
 
@@ -40,7 +40,7 @@
 | Metadata | `%LOCALAPPDATA%\PCCommand\` |
 | Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
 
-[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) · **v2.0.0**
+[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) Â· **v2.0.1**
 
 ## Launch
 
@@ -48,7 +48,7 @@
 2. Extract anywhere  
 3. Run `Launch-Hub-Systeme.exe` (Windows will ask for admin)
 
-Windows may show a warning: binaries are **not signed**. That is **SmartScreen**, not an antivirus “virus” verdict.
+Windows may show a warning: binaries are **not signed**. That is **SmartScreen**, not an antivirus â€œvirusâ€ verdict.
 
 ## Official version only
 
@@ -56,15 +56,15 @@ The only build I stand behind:
 
 **https://github.com/Mr-Aurevo-X/Hub-Systeme**
 
-A fork or modified copy elsewhere is **not** my version — I am not responsible for it.  
-Software **as is**, without warranty — see `LICENSE` and `PRIVACY.md`.
+A fork or modified copy elsewhere is **not** my version â€” I am not responsible for it.  
+Software **as is**, without warranty â€” see `LICENSE` and `PRIVACY.md`.
 
 ## Support (optional)
 
-If you like the work, a coffee — otherwise just enjoy.
+If you like the work, a coffee â€” otherwise just enjoy.
 
 [![Discord](https://img.shields.io/badge/Discord-Mr--Aurevo--X-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=050807)](https://discord.com/users/406891052516114442)
-[![Crypto](https://img.shields.io/badge/Crypto-dons_·_tips-f7931a?style=for-the-badge&logo=bitcoin&logoColor=050807&labelColor=050807)](https://github.com/Mr-Aurevo-X#user-content-support)
+[![Crypto](https://img.shields.io/badge/Crypto-dons_Â·_tips-f7931a?style=for-the-badge&logo=bitcoin&logoColor=050807&labelColor=050807)](https://github.com/Mr-Aurevo-X#user-content-support)
 
 ---
 
