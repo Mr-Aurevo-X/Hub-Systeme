@@ -1431,7 +1431,7 @@ class Api(WindowChromeMixin):
             "title": hub_update.title_with_version(HUB_TITLE, ver),
         }
 
-        def list_crypto_donations(self) -> dict:
+    def list_crypto_donations(self) -> dict:
         return hub_update.list_crypto_donations()
 
     def copy_crypto_address(self, asset_id: str = "") -> dict:

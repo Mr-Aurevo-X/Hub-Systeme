@@ -1,4 +1,4 @@
-﻿[FranÃ§ais](README.md) Â· [English](README.en.md)
+[FranÃ§ais](README.md) Â· [English](README.en.md)
 
 # PC Command | System
 
@@ -40,7 +40,7 @@
 | Metadata | `%LOCALAPPDATA%\PCCommand\` |
 | Prefs | `%LOCALAPPDATA%\Mr-Aurevo-X\user-settings.json` (shared) |
 
-[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) Â· **v2.0.1**
+[Download the release](https://github.com/Mr-Aurevo-X/Hub-Systeme/releases) Â· **v2.0.2**
 
 ## Launch
 
